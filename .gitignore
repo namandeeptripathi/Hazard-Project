@@ -26,3 +26,14 @@ node_modules/
 
 # Log Files
 *.log
+
+# Data Directories & Large GIS Datasets
+data/raw/
+data/processed/elevation/
+*.tif
+*.tiff
+*.zip
+*.tar.gz
+
+# Explicitly track essential registry and metadata files
+!data/dataset_registry.csv
