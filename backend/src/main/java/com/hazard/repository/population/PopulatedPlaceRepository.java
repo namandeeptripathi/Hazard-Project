@@ -38,4 +38,39 @@ public interface PopulatedPlaceRepository extends JpaRepository<PopulatedPlace, 
                                                       @Param("latitude") double latitude,
                                                       @Param("distanceMeters") double distanceMeters,
                                                       @Param("maxResults") int maxResults);
+
+    /**
+     * Spatial intersection query: find all populated places intersecting an arbitrary WKT polygon geometry.
+     */
+    @Query(value = "SELECT p.* FROM population.populated_places p " +
+                   "WHERE ST_Intersects(p.geom, ST_SetSRID(ST_GeomFromText(:wktGeometry), 4326)) " +
+                   "ORDER BY p.population DESC NULLS LAST", nativeQuery = true)
+    List<PopulatedPlace> findPlacesIntersectingGeometryWkt(@Param("wktGeometry") String wktGeometry);
+
+    /**
+     * Spatial buffer query: find all populated places intersecting a geographic buffer around a point coordinate.
+     */
+    @Query(value = "SELECT p.* FROM population.populated_places p " +
+                   "WHERE ST_Intersects(p.geom, ST_Buffer(ST_SetSRID(ST_Point(:longitude, :latitude), 4326)::geography, :distanceMeters)::geometry) " +
+                   "ORDER BY p.population DESC NULLS LAST", nativeQuery = true)
+    List<PopulatedPlace> findPlacesWithinBufferOfPoint(@Param("longitude") double longitude,
+                                                       @Param("latitude") double latitude,
+                                                       @Param("distanceMeters") double distanceMeters);
+
+    /**
+     * Spatial intersection query: find all populated places residing inside an administrative district boundary.
+     */
+    @Query(value = "SELECT p.* FROM population.populated_places p " +
+                   "JOIN boundaries.district_boundaries d ON ST_Intersects(p.geom, d.geom) " +
+                   "WHERE UPPER(d.name_2) = UPPER(:districtName) " +
+                   "ORDER BY p.population DESC NULLS LAST", nativeQuery = true)
+    List<PopulatedPlace> findPlacesInDistrictSpatial(@Param("districtName") String districtName);
+
+    /**
+     * Sums explicit non-null population in a district via PostGIS spatial intersection.
+     */
+    @Query(value = "SELECT COALESCE(SUM(p.population), 0) FROM population.populated_places p " +
+                   "JOIN boundaries.district_boundaries d ON ST_Intersects(p.geom, d.geom) " +
+                   "WHERE UPPER(d.name_2) = UPPER(:districtName)", nativeQuery = true)
+    Long sumExplicitPopulationInDistrict(@Param("districtName") String districtName);
 }

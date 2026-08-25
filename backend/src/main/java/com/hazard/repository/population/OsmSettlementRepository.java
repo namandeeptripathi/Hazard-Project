@@ -39,4 +39,22 @@ public interface OsmSettlementRepository extends JpaRepository<OsmSettlement, In
                                                  @Param("latitude") double latitude,
                                                  @Param("distanceMeters") double distanceMeters,
                                                  @Param("maxResults") int maxResults);
+
+    /**
+     * Spatial intersection query: find OSM settlement nodes intersecting a WKT polygon.
+     */
+    @Query(value = "SELECT s.* FROM population.osm_settlements s " +
+                   "WHERE ST_Intersects(s.geom, ST_SetSRID(ST_GeomFromText(:wktGeometry), 4326)) " +
+                   "ORDER BY s.population DESC NULLS LAST", nativeQuery = true)
+    List<OsmSettlement> findSettlementsIntersectingGeometryWkt(@Param("wktGeometry") String wktGeometry);
+
+    /**
+     * Spatial buffer query: find OSM settlement nodes within buffer distance of a point.
+     */
+    @Query(value = "SELECT s.* FROM population.osm_settlements s " +
+                   "WHERE ST_Intersects(s.geom, ST_Buffer(ST_SetSRID(ST_Point(:longitude, :latitude), 4326)::geography, :distanceMeters)::geometry) " +
+                   "ORDER BY s.population DESC NULLS LAST", nativeQuery = true)
+    List<OsmSettlement> findSettlementsWithinBufferOfPoint(@Param("longitude") double longitude,
+                                                          @Param("latitude") double latitude,
+                                                          @Param("distanceMeters") double distanceMeters);
 }
