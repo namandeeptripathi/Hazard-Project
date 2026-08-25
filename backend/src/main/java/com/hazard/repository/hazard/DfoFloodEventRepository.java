@@ -41,4 +41,15 @@ public interface DfoFloodEventRepository extends JpaRepository<DfoFloodEvent, In
     List<DfoFloodEvent> findEventsNearPoint(@Param("longitude") double longitude,
                                             @Param("latitude") double latitude,
                                             @Param("distanceMeters") double distanceMeters);
+
+    /**
+     * Spatial bounding box query: find flood event centroids within a geographic bounding box [minLon, minLat, maxLon, maxLat].
+     */
+    @Query(value = "SELECT * FROM hazard.dfo_flood_events f " +
+                   "WHERE ST_Intersects(f.geom, ST_MakeEnvelope(:minLon, :minLat, :maxLon, :maxLat, 4326)) " +
+                   "ORDER BY f.began_date DESC", nativeQuery = true)
+    List<DfoFloodEvent> findEventsInBoundingBox(@Param("minLon") double minLon,
+                                                @Param("minLat") double minLat,
+                                                @Param("maxLon") double maxLon,
+                                                @Param("maxLat") double maxLat);
 }
