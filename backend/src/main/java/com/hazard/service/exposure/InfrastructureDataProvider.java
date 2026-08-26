@@ -26,17 +26,18 @@ public class InfrastructureDataProvider {
     private static final Logger log = LoggerFactory.getLogger(InfrastructureDataProvider.class);
 
     private final OsmWaterwayRepository osmWaterwayRepository;
-    private final List<InfrastructureAssetDto> verifiedRegionalFacilities = new ArrayList<>();
+    private final List<InfrastructureAssetDto> configuredRegionalFacilities = new ArrayList<>();
 
     public InfrastructureDataProvider(OsmWaterwayRepository osmWaterwayRepository) {
         this.osmWaterwayRepository = osmWaterwayRepository;
-        initVerifiedRegionalFacilities();
+        initConfiguredRegionalFacilities();
     }
 
     /**
-     * Initializes verified regional lifeline facilities across Bihar pilot basins.
+     * Initializes configured regional pilot facilities across Bihar pilot basins.
+     * These are reference facilities stored in the application dataset as candidate infrastructure for the MVP.
      */
-    private void initVerifiedRegionalFacilities() {
+    private void initConfiguredRegionalFacilities() {
         // HEALTHCARE (High / Very High Criticality)
         addFacility("FAC-MED-001", "Patna Medical College & Hospital (PMCH)", InfrastructureCategory.HEALTHCARE, "tertiary_hospital", "Patna", 85.1580, 25.6208, InfrastructureCriticality.VERY_HIGH);
         addFacility("FAC-MED-002", "AIIMS Patna", InfrastructureCategory.HEALTHCARE, "super_specialty_hospital", "Patna", 85.0440, 25.5615, InfrastructureCriticality.VERY_HIGH);
@@ -80,7 +81,7 @@ public class InfrastructureDataProvider {
         addFacility("FAC-EDU-002", "Patna University Main Campus", InfrastructureCategory.EDUCATION, "university_campus", "Patna", 85.1680, 25.6190, InfrastructureCriticality.MODERATE);
         addFacility("FAC-EDU-003", "Babasaheb Bhimrao Ambedkar Bihar University", InfrastructureCategory.EDUCATION, "university_campus", "Muzaffarpur", 85.3620, 26.1150, InfrastructureCriticality.MODERATE);
 
-        log.info("Initialized {} verified regional critical facilities for Bihar pilot basins", verifiedRegionalFacilities.size());
+        log.info("Initialized {} configured regional critical facilities for Bihar pilot basins", configuredRegionalFacilities.size());
     }
 
     private void addFacility(String id, String name, InfrastructureCategory cat, String subType, String district, double lon, double lat, InfrastructureCriticality crit) {
@@ -96,8 +97,8 @@ public class InfrastructureDataProvider {
         dto.setLineInfrastructure(false);
         dto.setCriticality(crit);
         dto.setCriticalitySource("CONFIGURED_MAPPING");
-        dto.setDataProvenance("VERIFIED_REGIONAL_FACILITIES");
-        verifiedRegionalFacilities.add(dto);
+        dto.setDataProvenance("CONFIGURED_REGIONAL_FACILITIES");
+        configuredRegionalFacilities.add(dto);
     }
 
     /**
@@ -125,11 +126,11 @@ public class InfrastructureDataProvider {
     }
 
     /**
-     * Retrieves verified regional facilities intersecting a radial buffer.
+     * Retrieves configured regional facilities intersecting a radial buffer.
      */
     public List<InfrastructureAssetDto> getRegionalFacilitiesInPointBuffer(double lon, double lat, double bufferMeters) {
         List<InfrastructureAssetDto> list = new ArrayList<>();
-        for (InfrastructureAssetDto f : verifiedRegionalFacilities) {
+        for (InfrastructureAssetDto f : configuredRegionalFacilities) {
             if (f.getLongitude() == null || f.getLatitude() == null) continue;
             double dist = SettlementExposureService.haversineDistanceMeters(lat, lon, f.getLatitude(), f.getLongitude());
             if (dist <= bufferMeters) {
@@ -142,11 +143,30 @@ public class InfrastructureDataProvider {
     }
 
     /**
-     * Retrieves verified regional facilities in a district.
+     * Retrieves configured regional facilities in a district.
      */
     public List<InfrastructureAssetDto> getRegionalFacilitiesInDistrict(String districtName) {
-        return verifiedRegionalFacilities.stream()
+        return configuredRegionalFacilities.stream()
                 .filter(f -> f.getDistrictName() != null && f.getDistrictName().equalsIgnoreCase(districtName))
+                .map(this::copyFacilityDto)
+                .collect(Collectors.toList());
+    }
+
+    /**
+     * Retrieves all configured regional facilities across all districts.
+     */
+    public List<InfrastructureAssetDto> getAllRegionalFacilities() {
+        return configuredRegionalFacilities.stream()
+                .map(this::copyFacilityDto)
+                .collect(Collectors.toList());
+    }
+
+    /**
+     * Stage 5.7: Retrieves all configured healthcare facilities (hospitals, medical centers).
+     */
+    public List<InfrastructureAssetDto> getHealthcareFacilities() {
+        return configuredRegionalFacilities.stream()
+                .filter(f -> f.getCategory() == InfrastructureCategory.HEALTHCARE)
                 .map(this::copyFacilityDto)
                 .collect(Collectors.toList());
     }

@@ -93,7 +93,7 @@ public class InfrastructureExposureService {
                 event.getLongitude(), event.getLatitude(), bufferMeters
         );
 
-        // 2. Verified regional facilities
+        // 2. Configured regional facilities
         List<InfrastructureAssetDto> facilityAssets = dataProvider.getRegionalFacilitiesInPointBuffer(
                 event.getLongitude(), event.getLatitude(), bufferMeters
         );

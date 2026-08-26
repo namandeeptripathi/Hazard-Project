@@ -1,3 +1,4 @@
+
 # Stage 1.10 — Technology Decisions Specification
 
 **Project:** Smart Hazard Risk Prediction and Relocation System  
