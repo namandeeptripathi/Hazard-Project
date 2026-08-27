@@ -64,6 +64,27 @@ public enum SuitabilityClass {
         return this != UNKNOWN;
     }
 
+    public int getTierLevel() {
+        return switch (this) {
+            case HIGHLY_SUITABLE -> 1;
+            case SUITABLE -> 2;
+            case MARGINAL -> 3;
+            case UNSUITABLE -> 4;
+            case UNKNOWN -> 5;
+        };
+    }
+
+    /**
+     * Checks if this suitability class meets or exceeds a specified minimum suitability tier.
+     * Tier hierarchy: HIGHLY_SUITABLE (1) > SUITABLE (2) > MARGINAL (3) > UNSUITABLE (4) > UNKNOWN (5).
+     */
+    public boolean isAtLeast(SuitabilityClass minRequired) {
+        if (minRequired == null) {
+            return true;
+        }
+        return this.getTierLevel() <= minRequired.getTierLevel();
+    }
+
     /**
      * Parses a string into a SuitabilityClass.
      * Throws InvalidHazardParameterException with allowed values if invalid.

@@ -1,5 +1,7 @@
 package com.hazard.dto.relocation;
 
+import com.hazard.domain.relocation.RelocationStatus;
+
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
@@ -35,6 +37,11 @@ public class RelocationPlanDto {
     // Granular Assignments & Unallocated Deficits
     private List<RelocationAssignmentDto> assignments = new ArrayList<>();
     private List<VulnerableHabitationDto> unallocatedHabitations = new ArrayList<>();
+
+    // Overall Plan Status & Deficit Accounting (Stage 6.6)
+    private RelocationStatus overallStatus = RelocationStatus.PENDING;
+    private String deficitReasonCode;  // NO_FEASIBLE_SITE, CAPACITY_EXHAUSTED, PARTIAL_CAPACITY, FULLY_ALLOCATED
+    private String deficitExplanation;
 
     // Metadata
     private String strategy;
@@ -89,6 +96,21 @@ public class RelocationPlanDto {
             this.capacityUtilizationPercentage = Math.round(((double) this.totalCapacityUtilized / this.totalCapacityAvailable * 100.0) * 100.0) / 100.0;
         } else {
             this.capacityUtilizationPercentage = 0.0;
+        }
+
+        // Determine overall relocation status
+        if (this.totalVulnerablePopulation == null || this.totalVulnerablePopulation <= 0) {
+            this.overallStatus = RelocationStatus.ALLOCATED;
+        } else if (this.totalUnallocatedPopulation <= 0) {
+            this.overallStatus = RelocationStatus.ALLOCATED;
+        } else if (this.totalAllocatedPopulation > 0) {
+            this.overallStatus = RelocationStatus.PARTIALLY_ALLOCATED;
+        } else if (this.assignments.isEmpty() && !this.unallocatedHabitations.isEmpty()) {
+            this.overallStatus = this.unallocatedHabitations.get(0).getRelocationStatus() != null
+                    ? this.unallocatedHabitations.get(0).getRelocationStatus()
+                    : RelocationStatus.UNALLOCATED_CAPACITY_EXCEEDED;
+        } else {
+            this.overallStatus = RelocationStatus.UNALLOCATED_CAPACITY_EXCEEDED;
         }
     }
 
@@ -244,6 +266,72 @@ public class RelocationPlanDto {
 
     public void setPlanSummary(String planSummary) {
         this.planSummary = planSummary;
+    }
+
+    public RelocationStatus getOverallStatus() {
+        return overallStatus;
+    }
+
+    public void setOverallStatus(RelocationStatus overallStatus) {
+        this.overallStatus = overallStatus;
+    }
+
+    public RelocationStatus getStatus() {
+        return getOverallStatus();
+    }
+
+    public void setStatus(RelocationStatus status) {
+        setOverallStatus(status);
+    }
+
+    public String getDeficitReasonCode() {
+        return deficitReasonCode;
+    }
+
+    public void setDeficitReasonCode(String deficitReasonCode) {
+        this.deficitReasonCode = deficitReasonCode;
+    }
+
+    public String getDeficitExplanation() {
+        return deficitExplanation;
+    }
+
+    public void setDeficitExplanation(String deficitExplanation) {
+        this.deficitExplanation = deficitExplanation;
+    }
+
+    public boolean hasDeficit() {
+        return totalUnallocatedPopulation != null && totalUnallocatedPopulation > 0;
+    }
+
+    public boolean isFullyAllocated() {
+        return totalUnallocatedPopulation != null && totalUnallocatedPopulation == 0 && totalVulnerablePopulation != null;
+    }
+
+    public Long getDeficitPopulation() {
+        return totalUnallocatedPopulation != null ? totalUnallocatedPopulation : 0L;
+    }
+
+    /**
+     * Verifies fundamental conservation of population invariants:
+     * 1. allocated + unallocated == totalVulnerablePopulation
+     * 2. allocated >= 0 and unallocated >= 0
+     * 3. allocated <= totalVulnerablePopulation
+     */
+    public boolean validateInvariants() {
+        if (totalAllocatedPopulation == null || totalUnallocatedPopulation == null || totalVulnerablePopulation == null) {
+            return false;
+        }
+        if (totalAllocatedPopulation < 0 || totalUnallocatedPopulation < 0 || totalVulnerablePopulation < 0) {
+            return false;
+        }
+        if (totalAllocatedPopulation + totalUnallocatedPopulation != totalVulnerablePopulation) {
+            return false;
+        }
+        if (totalAllocatedPopulation > totalVulnerablePopulation) {
+            return false;
+        }
+        return true;
     }
 
     public LocalDateTime getGenerationTimestamp() {

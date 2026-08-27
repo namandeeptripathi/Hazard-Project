@@ -93,6 +93,45 @@ public class RelocationAssignmentDto {
         this.assignmentId = "ASN-" + (habitation != null ? habitation.getHabitationId() : "NONE") + "-" + (safeSite != null ? safeSite.getSiteId() : "UNASSIGNED");
     }
 
+    /**
+     * Helper constructor to initialize a paired assignment between a habitation and a ranked safe site.
+     */
+    public RelocationAssignmentDto(VulnerableHabitationDto habitation, RankedRelocationSiteDto rankedSite,
+                                 long allocatedCount, Double distanceMeters, RelocationStatus status, String reason) {
+        this();
+        if (habitation != null) {
+            this.habitationId = habitation.getHabitationId();
+            this.habitationName = habitation.getHabitationName();
+            this.originDistrict = habitation.getDistrict();
+            this.originLatitude = habitation.getLatitude();
+            this.originLongitude = habitation.getLongitude();
+            this.vulnerablePopulation = habitation.getVulnerablePopulation();
+            this.urgency = habitation.getUrgency();
+            this.unallocatedPopulation = Math.max(0, (this.vulnerablePopulation != null ? this.vulnerablePopulation : 0) - allocatedCount);
+        }
+
+        if (rankedSite != null) {
+            this.destinationSiteId = rankedSite.getSiteId();
+            this.destinationSiteName = rankedSite.getSiteName();
+            this.destinationCategory = CandidateSiteCategory.fromString(rankedSite.getCategory());
+            this.destinationDistrict = rankedSite.getDistrict();
+            this.destinationLatitude = rankedSite.getDestinationLatitude();
+            this.destinationLongitude = rankedSite.getDestinationLongitude();
+            this.destinationSuitabilityClass = rankedSite.getSuitabilityClass();
+            this.destinationSuitabilityScore = rankedSite.getSuitabilityScore();
+            this.destinationRank = rankedSite.getRank();
+        }
+
+        this.allocatedPopulation = allocatedCount;
+        this.transitDistanceMeters = distanceMeters;
+        if (distanceMeters != null) {
+            this.transitDistanceKilometers = Math.round((distanceMeters / 1000.0) * 100.0) / 100.0;
+        }
+        this.status = status;
+        this.allocationReason = reason;
+        this.assignmentId = "ASN-" + (habitation != null ? habitation.getHabitationId() : "NONE") + "-" + (rankedSite != null ? rankedSite.getSiteId() : "UNASSIGNED");
+    }
+
     // --- Getters and Setters ---
 
     public String getAssignmentId() {

@@ -20,6 +20,12 @@ public class RelocationRequestDto {
     private String district;
     private String hazardId;
     private String hazardType;
+    private String habitationId;
+    private VulnerableHabitationDto habitation;
+    private Double originLatitude;
+    private Double originLongitude;
+    private Long vulnerablePopulation;
+
     private Double maxTransitDistanceKm = 25.0; // Default 25 km max emergency transit radius
     private SuitabilityClass minSuitabilityClass = SuitabilityClass.MARGINAL;
     private boolean prioritizeRedZones = true;
@@ -72,9 +78,7 @@ public class RelocationRequestDto {
     }
 
     public void setMaxTransitDistanceKm(Double maxTransitDistanceKm) {
-        if (maxTransitDistanceKm != null && maxTransitDistanceKm > 0.0) {
-            this.maxTransitDistanceKm = maxTransitDistanceKm;
-        }
+        this.maxTransitDistanceKm = maxTransitDistanceKm;
     }
 
     public SuitabilityClass getMinSuitabilityClass() {
@@ -99,6 +103,46 @@ public class RelocationRequestDto {
 
     public void setDefaultSiteCapacity(Integer defaultSiteCapacity) {
         this.defaultSiteCapacity = defaultSiteCapacity;
+    }
+
+    public String getHabitationId() {
+        return habitationId;
+    }
+
+    public void setHabitationId(String habitationId) {
+        this.habitationId = habitationId;
+    }
+
+    public VulnerableHabitationDto getHabitation() {
+        return habitation;
+    }
+
+    public void setHabitation(VulnerableHabitationDto habitation) {
+        this.habitation = habitation;
+    }
+
+    public Double getOriginLatitude() {
+        return originLatitude;
+    }
+
+    public void setOriginLatitude(Double originLatitude) {
+        this.originLatitude = originLatitude;
+    }
+
+    public Double getOriginLongitude() {
+        return originLongitude;
+    }
+
+    public void setOriginLongitude(Double originLongitude) {
+        this.originLongitude = originLongitude;
+    }
+
+    public Long getVulnerablePopulation() {
+        return vulnerablePopulation;
+    }
+
+    public void setVulnerablePopulation(Long vulnerablePopulation) {
+        this.vulnerablePopulation = vulnerablePopulation;
     }
 
     public String getAllocationStrategy() {
