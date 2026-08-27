@@ -1,212 +1,125 @@
 package com.hazard;
 
-import com.hazard.domain.risk.RiskTier;
-import com.hazard.domain.risk.contributor.ContributorImportance;
-import com.hazard.domain.risk.explain.EvidenceType;
-import com.hazard.domain.risk.explain.SensitivityImpactTier;
-import com.hazard.dto.risk.DistrictRiskScoreDto;
-import com.hazard.dto.risk.ExposureSubBreakdownDto;
-import com.hazard.dto.risk.RiskComponentDetailDto;
-import com.hazard.dto.risk.contributor.DetailedRiskContributorDto;
-import com.hazard.dto.risk.contributor.DistrictRiskContributorsProfileDto;
-import com.hazard.dto.risk.explain.*;
-import com.hazard.service.risk.explain.RiskExplanationEngine;
+import com.hazard.domain.relocation.PriorityLevel;
+import com.hazard.domain.relocation.RelocationUrgency;
+import com.hazard.dto.relocation.RelocationPriorityResultDto;
+import com.hazard.dto.relocation.explain.DecisionContributorDto;
+import com.hazard.dto.relocation.explain.RiskExplanationDto;
+import com.hazard.service.relocation.PriorityScoringConfig;
+import com.hazard.service.relocation.explain.RiskExplanationEngine;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
-import java.util.*;
+import java.util.LinkedHashMap;
+import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.*;
 
 /**
- * Unit test suite for Stage 4.10 — Risk Explanation Engine.
+ * Stage 7C.2 — Risk Explanation Engine Tests.
  */
-@DisplayName("Stage 4.10: Risk Explanation Engine Tests")
-public class RiskExplanationEngineTests {
+class RiskExplanationEngineTests {
 
     private RiskExplanationEngine engine;
+    private PriorityScoringConfig config;
 
     @BeforeEach
     void setUp() {
-        engine = new RiskExplanationEngine();
+        config = new PriorityScoringConfig();
+        engine = new RiskExplanationEngine(config);
     }
 
-    private DistrictRiskScoreDto createMockRiskDto() {
-        DistrictRiskScoreDto dto = new DistrictRiskScoreDto();
-        dto.setDistrictName("Sitamarhi");
-        dto.setDistrictId(32);
-        dto.setRiskScore(0.4228);
-        dto.setRiskScore100(42.3);
-        dto.setRiskTier(RiskTier.HIGH);
+    private RelocationPriorityResultDto createPriorityResult(String id, String name, double score,
+                                                              PriorityLevel level, double risk, double hazard,
+                                                              long pop, long unalloc, RelocationUrgency urgency, boolean redZone) {
+        RelocationPriorityResultDto res = new RelocationPriorityResultDto(id, score, level);
+        res.setHabitationName(name);
+        res.setRiskScore(risk);
+        res.setHazardSeverityScore(hazard);
+        res.setVulnerablePopulation(pop);
+        res.setUnallocatedPopulation(unalloc);
+        res.setUrgency(urgency);
+        res.setRedZone(redZone);
+        res.setOverallStatus(unalloc > 0 ? "UNALLOCATED_NO_SAFE_SITE" : "ALLOCATED");
 
-        Map<String, RiskComponentDetailDto> comps = new LinkedHashMap<>();
+        Map<String, Double> contribs = new LinkedHashMap<>();
+        contribs.put(PriorityScoringConfig.RISK_SEVERITY, risk);
+        contribs.put(PriorityScoringConfig.HAZARD_SEVERITY, hazard);
+        contribs.put(PriorityScoringConfig.POPULATION_EXPOSURE, 0.70);
+        contribs.put(PriorityScoringConfig.CAPACITY_DEFICIT, unalloc > 0 ? 1.0 : 0.0);
+        contribs.put(PriorityScoringConfig.ALLOCATION_FAILURE, unalloc > 0 ? 1.0 : 0.0);
+        contribs.put(PriorityScoringConfig.URGENCY, urgency == RelocationUrgency.CRITICAL ? 1.0 : 0.67);
+        res.setScoringContributors(contribs);
 
-        RiskComponentDetailDto h = new RiskComponentDetailDto();
-        h.setComponentType(com.hazard.domain.risk.RiskComponentType.HAZARD);
-        h.setScore(0.60);
-        h.setConfiguredWeight(0.35);
-        h.setEffectiveWeight(0.35);
-        h.setContribution(0.2100);
-        comps.put("HAZARD", h);
-
-        RiskComponentDetailDto e = new RiskComponentDetailDto();
-        e.setComponentType(com.hazard.domain.risk.RiskComponentType.EXPOSURE);
-        e.setScore(0.38);
-        e.setConfiguredWeight(0.30);
-        e.setEffectiveWeight(0.30);
-        e.setContribution(0.1140);
-        comps.put("EXPOSURE", e);
-
-        RiskComponentDetailDto v = new RiskComponentDetailDto();
-        v.setComponentType(com.hazard.domain.risk.RiskComponentType.VULNERABILITY);
-        v.setScore(0.2470);
-        v.setConfiguredWeight(0.25);
-        v.setEffectiveWeight(0.25);
-        v.setContribution(0.0618);
-        comps.put("VULNERABILITY", v);
-
-        RiskComponentDetailDto t = new RiskComponentDetailDto();
-        t.setComponentType(com.hazard.domain.risk.RiskComponentType.HISTORICAL);
-        t.setScore(0.3700);
-        t.setConfiguredWeight(0.10);
-        t.setEffectiveWeight(0.10);
-        t.setContribution(0.0370);
-        comps.put("HISTORICAL", t);
-
-        dto.setComponents(comps);
-
-        ExposureSubBreakdownDto exp = new ExposureSubBreakdownDto();
-        exp.setPopulationExposureScore(0.2226);
-        exp.setPopulationConfiguredWeight(0.40);
-        exp.setExposedPopulation(94293L);
-        exp.setExposedPopulationPercentage(22.3);
-
-        exp.setSettlementExposureScore(0.5000);
-        exp.setSettlementConfiguredWeight(0.25);
-        exp.setSettlementsExposedCount(1878);
-
-        exp.setInfrastructureExposureScore(0.4743);
-        exp.setInfrastructureConfiguredWeight(0.35);
-        exp.setInfrastructureAssetsExposedCount(31);
-
-        dto.setExposureSubBreakdown(exp);
-        return dto;
+        return res;
     }
 
-    private DistrictRiskContributorsProfileDto createMockContributorsProfile(DistrictRiskScoreDto risk) {
-        DistrictRiskContributorsProfileDto profile = new DistrictRiskContributorsProfileDto();
-        profile.setDistrictName(risk.getDistrictName());
-        profile.setRiskScore(risk.getRiskScore());
-        profile.setRiskScore100(risk.getRiskScore100());
-        profile.setRiskTier(risk.getRiskTier());
+    @Nested
+    @DisplayName("Immediate Priority Risk Explanations")
+    class ImmediateRiskTests {
 
-        List<DetailedRiskContributorDto> list = new ArrayList<>();
-        list.add(new DetailedRiskContributorDto("HAZARD", "Hazard Severity & Intensity", "HAZARD", 1,
-                0.60, 0.60, 0.35, 0.35, 0.2100, 49.7, 1, ContributorImportance.DOMINANT, "Stage 3", "Hazard footprint"));
-        list.add(new DetailedRiskContributorDto("EXPOSURE", "Combined Exposure", "EXPOSURE", 1,
-                0.38, 0.38, 0.30, 0.30, 0.1140, 27.0, 2, ContributorImportance.DOMINANT, "Stages 4.1-4.3", "Exposure"));
-        list.add(new DetailedRiskContributorDto("VULNERABILITY", "Vulnerability & Coping Deficit", "VULNERABILITY", 1,
-                0.247, 0.247, 0.25, 0.25, 0.0618, 14.6, 3, ContributorImportance.MODERATE, "Stage 4.5", "Vulnerability"));
-        list.add(new DetailedRiskContributorDto("HISTORICAL", "Historical Disaster Evidence", "HISTORICAL", 1,
-                0.37, 0.37, 0.10, 0.10, 0.0370, 8.8, 4, ContributorImportance.MODERATE, "Stage 4.6", "Historical"));
+        @Test
+        @DisplayName("Generates critical risk explanation and primary drivers for IMMEDIATE case")
+        void testImmediateRiskExplanation() {
+            RelocationPriorityResultDto res = createPriorityResult(
+                    "HAB-01", "Sonbarsa Inundated Zone", 0.88, PriorityLevel.IMMEDIATE,
+                    0.92, 0.85, 5000L, 5000L, RelocationUrgency.CRITICAL, true
+            );
 
-        profile.setAllContributors(list);
-        profile.setTopContributors(list);
-        return profile;
-    }
+            RiskExplanationDto exp = engine.explainRisk(res);
 
-    @Test
-    @DisplayName("Generate complete explainability profile with multi-level summaries")
-    void testBuildExplainabilityProfile() {
-        DistrictRiskScoreDto risk = createMockRiskDto();
-        DistrictRiskContributorsProfileDto contrib = createMockContributorsProfile(risk);
+            assertNotNull(exp);
+            assertEquals("CRITICAL_IMMEDIATE", exp.getRiskCategory());
+            assertEquals(PriorityLevel.IMMEDIATE, exp.getPriorityLevel());
+            assertEquals(0.88, exp.getPriorityScore());
+            assertTrue(exp.getRiskNarrative().contains("IMMEDIATE"));
+            assertTrue(exp.getUrgencyContext().contains("Emergency action"));
 
-        DistrictRiskExplainabilityProfileDto profile = engine.buildExplainabilityProfile(contrib, risk, null, null, null);
+            // Check 6 contributors
+            assertEquals(6, exp.getContributors().size());
 
-        assertNotNull(profile);
-        assertEquals("Sitamarhi", profile.getDistrictName());
-        assertEquals("explain-v1", profile.getExplanationVersion());
-        assertEquals(0.4228, profile.getRiskScore(), 0.001);
-
-        // Summaries
-        assertNotNull(profile.getSummary());
-        assertTrue(profile.getSummary().getExecutiveSummary().contains("Sitamarhi"));
-        assertTrue(profile.getSummary().getExecutiveSummary().contains("HIGH"));
-        assertNotNull(profile.getSummary().getShortSummary());
-        assertNotNull(profile.getSummary().getDetailedNarrative());
-
-        // Primary vs Secondary Drivers
-        assertFalse(profile.getPrimaryDrivers().isEmpty());
-        assertEquals("HAZARD", profile.getPrimaryDrivers().get(0).getId());
-    }
-
-    @Test
-    @DisplayName("Build structured evidence items with explicit provenance")
-    void testBuildEvidenceCatalog() {
-        DistrictRiskScoreDto risk = createMockRiskDto();
-        List<ExplainableEvidenceItemDto> items = engine.buildEvidenceCatalog(risk, null, null, null);
-
-        assertNotNull(items);
-        assertFalse(items.isEmpty());
-
-        // Verify evidence contains Hazard, Population, Settlement, Infrastructure evidence
-        boolean hasHazard = items.stream().anyMatch(e -> e.getType() == EvidenceType.HAZARD_EVIDENCE);
-        boolean hasPop = items.stream().anyMatch(e -> e.getType() == EvidenceType.POPULATION_EVIDENCE);
-        boolean hasInfra = items.stream().anyMatch(e -> e.getType() == EvidenceType.INFRASTRUCTURE_EVIDENCE);
-
-        assertTrue(hasHazard, "Should contain hazard evidence");
-        assertTrue(hasPop, "Should contain population evidence");
-        assertTrue(hasInfra, "Should contain infrastructure evidence");
-
-        // Verify provenance is not null
-        for (ExplainableEvidenceItemDto item : items) {
-            assertNotNull(item.getProvenance());
-            assertNotNull(item.getSourceStage());
+            // Check primary drivers
+            assertFalse(exp.getPrimaryRiskDrivers().isEmpty());
+            assertTrue(exp.getPrimaryRiskDrivers().get(0).contains("Multi-Hazard Risk")
+                    || exp.getPrimaryRiskDrivers().get(0).contains("Capacity Deficit"));
         }
     }
 
-    @Test
-    @DisplayName("Build mathematical calculation trace reconciling with final score")
-    void testBuildCalculationTrace() {
-        DistrictRiskScoreDto risk = createMockRiskDto();
-        DistrictRiskContributorsProfileDto contrib = createMockContributorsProfile(risk);
+    @Nested
+    @DisplayName("Monitoring Low Risk Explanations")
+    class MonitoringRiskTests {
 
-        CalculationTraceDto trace = engine.buildCalculationTrace(risk, contrib.getAllContributors());
+        @Test
+        @DisplayName("Generates monitoring narrative for low-risk case")
+        void testMonitoringRiskExplanation() {
+            RelocationPriorityResultDto res = createPriorityResult(
+                    "HAB-SAFE", "Elevated Village", 0.08, PriorityLevel.MONITORING,
+                    0.05, 0.05, 100L, 0L, RelocationUrgency.LOW, false
+            );
 
-        assertNotNull(trace);
-        assertTrue(trace.isReconciled());
-        assertEquals(0.4228, trace.getSumOfContributions(), 0.001);
-        assertNotNull(trace.getFormulaString());
-        assertNotNull(trace.getParameterizedFormulaString());
-        assertEquals(4, trace.getComponents().size());
+            RiskExplanationDto exp = engine.explainRisk(res);
+
+            assertEquals("MONITORING_LOW", exp.getRiskCategory());
+            assertTrue(exp.getRiskNarrative().contains("MONITORING"));
+            assertTrue(exp.getUrgencyContext().contains("No immediate evacuation needed"));
+        }
     }
 
-    @Test
-    @DisplayName("Perform one-at-a-time model sensitivity analysis and rank leverage")
-    void testBuildSensitivityAnalysis() {
-        DistrictRiskScoreDto risk = createMockRiskDto();
-        DistrictRiskContributorsProfileDto contrib = createMockContributorsProfile(risk);
+    @Nested
+    @DisplayName("Null Safety")
+    class NullSafetyTests {
 
-        List<ComponentSensitivityDto> sensitivity = engine.buildSensitivityAnalysis(risk, contrib.getAllContributors());
+        @Test
+        @DisplayName("Null priority result returns safe baseline monitoring explanation")
+        void testNullResultSafety() {
+            RiskExplanationDto exp = engine.explainRisk(null);
 
-        assertNotNull(sensitivity);
-        assertEquals(4, sensitivity.size());
-
-        // Hazard has highest weight (0.35) -> highest leverage rank #1
-        ComponentSensitivityDto topLeverage = sensitivity.get(0);
-        assertEquals("HAZARD", topLeverage.getComponentId());
-        assertEquals(1, topLeverage.getLeverageRank());
-        assertEquals(0.035, topLeverage.getAbsoluteLeverageImpact(), 0.001);
-        assertEquals(SensitivityImpactTier.HIGH_LEVERAGE, topLeverage.getLeverageTier());
-    }
-
-    @Test
-    @DisplayName("Model limitations are explicitly defined and non-empty")
-    void testModelLimitations() {
-        List<String> limitations = engine.buildModelLimitations();
-        assertNotNull(limitations);
-        assertTrue(limitations.size() >= 4);
-        assertTrue(limitations.stream().anyMatch(l -> l.contains("Decision Support Metric")));
+            assertNotNull(exp);
+            assertEquals(PriorityLevel.MONITORING, exp.getPriorityLevel());
+            assertEquals("MONITORING_LOW", exp.getRiskCategory());
+            assertEquals(0.0, exp.getPriorityScore());
+        }
     }
 }
