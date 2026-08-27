@@ -1,0 +1,821 @@
+/**
+ * Stage 8B — Views Layout & View Container CSS
+ *
+ * Command Center (OverviewView) + Interactive GIS Map (MapView)
+ */
+
+/* View Root Wrapper */
+.view-container {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-5);
+    animation: fadeIn var(--transition-fast) ease-in-out;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(4px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+/* ==========================================================================
+   1. COMMAND CENTER (OverviewView)
+   ========================================================================== */
+.overview-kpi-row {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: var(--space-4);
+}
+
+.overview-action-banner {
+    background: linear-gradient(135deg, rgba(2, 132, 199, 0.15), rgba(139, 92, 246, 0.1));
+    border: 1px solid rgba(56, 189, 248, 0.3);
+    border-radius: var(--radius-lg);
+    padding: var(--space-4) var(--space-5);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.action-banner-text h3 {
+    font-size: var(--font-size-md);
+    font-weight: var(--font-weight-bold);
+    color: var(--text-primary);
+}
+
+.action-banner-text p {
+    font-size: var(--font-size-xs);
+    color: var(--text-secondary);
+    margin-top: 2px;
+}
+
+/* Priority Settlements Table & Cards */
+.priority-table-container {
+    width: 100%;
+    overflow-x: auto;
+}
+
+.priority-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: var(--font-size-sm);
+    text-align: left;
+}
+
+.priority-table th {
+    background-color: var(--bg-surface-elevated);
+    color: var(--text-secondary);
+    font-size: var(--font-size-xs);
+    font-weight: var(--font-weight-semibold);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    padding: var(--space-3) var(--space-4);
+    border-bottom: 1px solid var(--border-default);
+}
+
+.priority-table td {
+    padding: var(--space-3) var(--space-4);
+    border-bottom: 1px solid var(--border-subtle);
+    color: var(--text-primary);
+    vertical-align: middle;
+}
+
+.priority-table tbody tr {
+    transition: background-color var(--transition-fast);
+}
+
+.priority-table tbody tr:hover {
+    background-color: var(--bg-surface-hover);
+}
+
+.settlement-name-cell {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    font-weight: var(--font-weight-semibold);
+}
+
+.settlement-name-link {
+    color: var(--text-primary);
+    text-decoration: none;
+    transition: color var(--transition-fast);
+}
+
+.settlement-name-link:hover {
+    color: var(--status-info-bright);
+    text-decoration: underline;
+}
+
+.red-zone-tag {
+    background: var(--status-critical-bg);
+    color: var(--status-critical-text);
+    border: 1px solid var(--status-critical-border);
+    border-radius: var(--radius-sm);
+    padding: 1px 4px;
+    font-size: var(--font-size-2xs);
+    font-weight: var(--font-weight-bold);
+}
+
+/* Operational Summary 3-Column Grid */
+.operational-summary-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: var(--space-4);
+}
+
+.summary-metric-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: var(--font-size-sm);
+    padding: var(--space-2) 0;
+    border-bottom: 1px solid var(--border-subtle);
+}
+
+.summary-metric-row:last-child {
+    border-bottom: none;
+}
+
+.summary-metric-label {
+    color: var(--text-secondary);
+}
+
+.summary-metric-value {
+    font-weight: var(--font-weight-bold);
+    color: var(--text-primary);
+}
+
+/* ==========================================================================
+   2. INTERACTIVE GIS MAP (MapView)
+   ========================================================================== */
+.map-workspace-container {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-3);
+    height: calc(100vh - var(--header-height) - 130px);
+    min-height: 580px;
+    position: relative;
+}
+
+.map-toolbar {
+    background: var(--bg-surface);
+    border: 1px solid var(--border-default);
+    border-radius: var(--radius-md);
+    padding: var(--space-2) var(--space-3);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: var(--space-2);
+    z-index: 10;
+}
+
+.map-layer-toggles {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    flex-wrap: wrap;
+}
+
+.layer-toggle-label {
+    font-size: var(--font-size-xs);
+    font-weight: var(--font-weight-semibold);
+    color: var(--text-secondary);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-right: var(--space-1);
+}
+
+.layer-toggle-item {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-1);
+    background: var(--bg-surface-elevated);
+    border: 1px solid var(--border-default);
+    border-radius: var(--radius-md);
+    padding: 0.25rem 0.6rem;
+    font-size: var(--font-size-xs);
+    font-weight: var(--font-weight-medium);
+    color: var(--text-secondary);
+    cursor: pointer;
+    user-select: none;
+    transition: all var(--transition-fast);
+}
+
+.layer-toggle-item:hover {
+    border-color: var(--border-strong);
+    color: var(--text-primary);
+}
+
+.layer-toggle-item input[type="checkbox"] {
+    accent-color: var(--status-info-bright);
+    cursor: pointer;
+}
+
+.layer-toggle-item.active {
+    border-color: rgba(56, 189, 248, 0.4);
+    background: rgba(2, 132, 199, 0.15);
+    color: var(--status-info-bright);
+}
+
+/* Map Canvas Container */
+.map-canvas-container {
+    flex: 1;
+    background: #080c14;
+    border: 1px solid var(--border-default);
+    border-radius: var(--radius-lg);
+    position: relative;
+    overflow: hidden;
+}
+
+#gis-leaflet-map {
+    width: 100%;
+    height: 100%;
+    background: #090e17;
+    z-index: 1;
+}
+
+/* Custom Leaflet Dark Theme Overrides */
+.leaflet-container {
+    background-color: #080c14 !important;
+    font-family: var(--font-family-sans) !important;
+}
+
+.leaflet-tile-pane {
+    filter: brightness(0.6) invert(1) contrast(3) hue-rotate(200deg) saturate(0.25) brightness(0.65);
+}
+
+.leaflet-popup-content-wrapper {
+    background: var(--bg-surface-elevated) !important;
+    color: var(--text-primary) !important;
+    border: 1px solid var(--border-default) !important;
+    border-radius: var(--radius-lg) !important;
+    box-shadow: var(--shadow-lg) !important;
+    padding: 0 !important;
+}
+
+.leaflet-popup-content {
+    margin: 0 !important;
+    line-height: var(--line-height-normal) !important;
+}
+
+.leaflet-popup-tip {
+    background: var(--bg-surface-elevated) !important;
+    border: 1px solid var(--border-default) !important;
+}
+
+.leaflet-container a.leaflet-popup-close-button {
+    color: var(--text-secondary) !important;
+    padding: 8px !important;
+}
+
+.leaflet-container a.leaflet-popup-close-button:hover {
+    color: #ffffff !important;
+}
+
+/* Map Popup Card */
+.map-popup-card {
+    padding: var(--space-3) var(--space-4);
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+    min-width: 250px;
+    max-width: 320px;
+}
+
+.map-popup-header {
+    border-bottom: 1px solid var(--border-subtle);
+    padding-bottom: var(--space-2);
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+}
+
+.map-popup-title {
+    font-size: var(--font-size-sm);
+    font-weight: var(--font-weight-bold);
+    color: var(--text-primary);
+}
+
+.map-popup-subtitle {
+    font-size: var(--font-size-2xs);
+    color: var(--text-secondary);
+}
+
+.map-popup-body {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-1);
+    font-size: var(--font-size-xs);
+}
+
+.map-popup-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.map-popup-label {
+    color: var(--text-secondary);
+}
+
+.map-popup-value {
+    font-weight: var(--font-weight-semibold);
+    color: var(--text-primary);
+}
+
+.map-popup-actions {
+    margin-top: var(--space-2);
+    padding-top: var(--space-2);
+    border-top: 1px solid var(--border-subtle);
+}
+
+/* Floating Map Legend */
+.map-legend-panel {
+    position: absolute;
+    bottom: var(--space-4);
+    right: var(--space-4);
+    background: rgba(15, 23, 42, 0.92);
+    backdrop-filter: blur(8px);
+    border: 1px solid var(--border-default);
+    border-radius: var(--radius-md);
+    padding: var(--space-3);
+    z-index: 1000;
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+    min-width: 190px;
+    box-shadow: var(--shadow-md);
+    font-size: var(--font-size-xs);
+}
+
+.map-legend-title {
+    font-size: var(--font-size-2xs);
+    font-weight: var(--font-weight-bold);
+    color: var(--text-secondary);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-bottom: 2px;
+}
+
+.map-legend-section {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+}
+
+.legend-item {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    color: var(--text-primary);
+    font-size: var(--font-size-xs);
+}
+
+.legend-color-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: var(--radius-full);
+    flex-shrink: 0;
+}
+
+.legend-color-line {
+    width: 16px;
+    height: 3px;
+    border-top: 2px dashed #38bdf8;
+    flex-shrink: 0;
+}
+
+/* Marker Pulse Animation */
+.pulse-circle {
+    box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7);
+    animation: markerPulse 2s infinite;
+}
+
+@keyframes markerPulse {
+    0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7); }
+    70% { transform: scale(1.1); box-shadow: 0 0 0 8px rgba(239, 68, 68, 0); }
+    100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
+}
+
+/* ==========================================================================
+   3. SAFE SITES & RELOCATION VIEWS
+   ========================================================================== */
+.safe-sites-filter-bar {
+    display: flex;
+    gap: var(--space-3);
+    align-items: center;
+    background: var(--bg-surface);
+    padding: var(--space-3);
+    border: 1px solid var(--border-default);
+    border-radius: var(--radius-md);
+    flex-wrap: wrap;
+}
+
+.form-control {
+    background: var(--bg-surface-elevated);
+    border: 1px solid var(--border-default);
+    border-radius: var(--radius-md);
+    padding: var(--space-2) var(--space-3);
+    color: var(--text-primary);
+    font-size: var(--font-size-sm);
+    outline: none;
+}
+
+.form-control:focus {
+    border-color: var(--border-focus);
+}
+
+.sites-card-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+    gap: var(--space-4);
+}
+
+/* Two-tone Capacity Bar */
+.capacity-utilization-container {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    margin: var(--space-2) 0;
+}
+
+.capacity-utilization-bar {
+    width: 100%;
+    height: 8px;
+    background: var(--bg-surface-active);
+    border-radius: var(--radius-full);
+    display: flex;
+    overflow: hidden;
+}
+
+.capacity-bar-allocated {
+    background: var(--status-info-bright);
+    height: 100%;
+    transition: width 0.5s ease;
+}
+
+.capacity-bar-available {
+    background: var(--status-safe);
+    height: 100%;
+    transition: width 0.5s ease;
+}
+
+.capacity-legend-row {
+    display: flex;
+    justify-content: space-between;
+    font-size: var(--font-size-xs);
+}
+
+/* Relocation Planner Layout */
+.relocation-workspace-layout {
+    display: grid;
+    grid-template-columns: 360px 1fr;
+    gap: var(--space-4);
+    min-height: 650px;
+}
+
+.relocation-queue-panel {
+    background: var(--bg-surface);
+    border: 1px solid var(--border-default);
+    border-radius: var(--radius-lg);
+    display: flex;
+    flex-direction: column;
+    max-height: 850px;
+    align-self: flex-start;
+    position: sticky;
+    top: 90px;
+}
+
+.relocation-queue-list {
+    padding: var(--space-3);
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+    overflow-y: auto;
+    flex: 1;
+}
+
+.relocation-queue-item {
+    padding: var(--space-3);
+    background: var(--bg-surface-elevated);
+    border: 1px solid var(--border-default);
+    border-radius: var(--radius-md);
+    cursor: pointer;
+    transition: all var(--transition-fast);
+}
+
+.relocation-queue-item:hover {
+    border-color: var(--border-focus);
+    background: var(--bg-surface-active);
+}
+
+.relocation-queue-item.active {
+    background: rgba(2, 132, 199, 0.14);
+    border-color: rgba(56, 189, 248, 0.5);
+    box-shadow: 0 0 12px rgba(2, 132, 199, 0.15);
+}
+
+.relocation-detail-panel {
+    background: var(--bg-surface);
+    border: 1px solid var(--border-default);
+    border-radius: var(--radius-lg);
+    display: flex;
+    flex-direction: column;
+    padding: var(--space-4);
+    gap: var(--space-4);
+}
+
+/* Capacity Gap Callout */
+.capacity-gap-alert {
+    background: rgba(239, 68, 68, 0.12);
+    border: 1px solid rgba(239, 68, 68, 0.4);
+    border-left: 4px solid var(--status-critical);
+    border-radius: var(--radius-md);
+    padding: var(--space-3) var(--space-4);
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+/* Feasibility Gate Rows */
+.feasibility-gates-grid {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+}
+
+.feasibility-gate-card {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: var(--space-2) var(--space-3);
+    background: var(--bg-surface-elevated);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-md);
+    font-size: var(--font-size-xs);
+}
+
+.feasibility-gate-card.pass {
+    border-left: 3px solid var(--status-safe);
+}
+
+.feasibility-gate-card.partial {
+    border-left: 3px solid var(--status-warning);
+}
+
+.feasibility-gate-card.fail {
+    border-left: 3px solid var(--status-critical);
+}
+
+/* Relocation Transit Corridor Mini-Map */
+.relocation-mini-map-container {
+    height: 260px;
+    width: 100%;
+    background: #080c14;
+    border: 1px solid var(--border-default);
+    border-radius: var(--radius-md);
+    overflow: hidden;
+    position: relative;
+}
+
+#relocation-mini-map {
+    width: 100%;
+    height: 100%;
+    background: #080c14;
+    z-index: 1;
+}
+
+/* Site Detail Modal */
+.site-modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.75);
+    backdrop-filter: blur(4px);
+    z-index: 9999;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: var(--space-4);
+}
+
+.site-modal-content {
+    background: var(--bg-surface-elevated);
+    border: 1px solid var(--border-default);
+    border-radius: var(--radius-lg);
+    width: 100%;
+    max-width: 620px;
+    max-height: 90vh;
+    overflow-y: auto;
+    box-shadow: var(--shadow-xl);
+    display: flex;
+    flex-direction: column;
+}
+
+/* ==========================================================================
+   4. SETTLEMENT INTELLIGENCE (SettlementDetailView)
+   ========================================================================== */
+.settlement-risk-hero {
+    background: linear-gradient(135deg, rgba(239, 68, 68, 0.12), rgba(15, 23, 42, 0.95));
+    border: 1px solid rgba(239, 68, 68, 0.35);
+    border-radius: var(--radius-lg);
+    padding: var(--space-5);
+    display: grid;
+    grid-template-columns: 240px 1fr;
+    gap: var(--space-6);
+    align-items: center;
+}
+
+.risk-score-display {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    border-right: 1px solid var(--border-default);
+    padding-right: var(--space-5);
+}
+
+.risk-score-large {
+    font-size: 3.2rem;
+    font-weight: 800;
+    color: #ffffff;
+    line-height: 1;
+    font-family: var(--font-family-sans);
+}
+
+.risk-score-denominator {
+    font-size: var(--font-size-sm);
+    color: var(--text-tertiary);
+    margin-top: 2px;
+}
+
+.risk-pillars-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: var(--space-3) var(--space-5);
+}
+
+.risk-pillar-item {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.risk-pillar-header {
+    display: flex;
+    justify-content: space-between;
+    font-size: var(--font-size-xs);
+    font-weight: var(--font-weight-semibold);
+}
+
+.risk-pillar-bar-bg {
+    width: 100%;
+    height: 6px;
+    background: var(--bg-surface-active);
+    border-radius: var(--radius-full);
+    overflow: hidden;
+}
+
+.risk-pillar-bar-fill {
+    height: 100%;
+    border-radius: var(--radius-full);
+    transition: width 0.6s ease-in-out;
+}
+
+/* Hazard & Vulnerability Cards */
+.hazard-metrics-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: var(--space-3);
+}
+
+.hazard-metric-card {
+    background: var(--bg-surface-elevated);
+    border: 1px solid var(--border-default);
+    border-radius: var(--radius-md);
+    padding: var(--space-3);
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.hazard-metric-title {
+    font-size: var(--font-size-xs);
+    color: var(--text-secondary);
+    font-weight: var(--font-weight-semibold);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.hazard-metric-val {
+    font-size: var(--font-size-md);
+    font-weight: var(--font-weight-bold);
+    color: var(--text-primary);
+}
+
+.hazard-metric-sub {
+    font-size: var(--font-size-2xs);
+    color: var(--text-tertiary);
+}
+
+/* Mini Map Spatial Container */
+.settlement-mini-map-container {
+    height: 320px;
+    width: 100%;
+    background: #080c14;
+    border: 1px solid var(--border-default);
+    border-radius: var(--radius-md);
+    overflow: hidden;
+    position: relative;
+}
+
+#settlement-mini-map {
+    width: 100%;
+    height: 100%;
+    background: #080c14;
+    z-index: 1;
+}
+
+/* Decision Rationale Box */
+.decision-rationale-box {
+    background: var(--bg-surface);
+    border: 1px solid var(--border-default);
+    border-radius: var(--radius-lg);
+    padding: var(--space-4);
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-3);
+}
+
+.decision-section-row {
+    font-size: var(--font-size-sm);
+    line-height: var(--line-height-relaxed);
+}
+
+.decision-action-callout {
+    background: var(--status-critical-bg);
+    border-left: 4px solid var(--status-critical);
+    border-radius: 0 var(--radius-md) var(--radius-md) 0;
+    padding: var(--space-3) var(--space-4);
+    font-size: var(--font-size-sm);
+    color: #ffffff;
+}
+
+.decision-factors-list {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+    margin-top: var(--space-2);
+}
+
+.decision-factor-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: var(--space-2) var(--space-3);
+    background: var(--bg-surface-elevated);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-md);
+    font-size: var(--font-size-xs);
+}
+
+/* ==========================================================================
+   5. RESPONSIVE BREAKPOINTS
+   ========================================================================== */
+@media (max-width: 1024px) {
+    .overview-kpi-row {
+        grid-template-columns: repeat(2, 1fr);
+    }
+
+    .operational-summary-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .relocation-workspace-layout {
+        grid-template-columns: 1fr;
+    }
+
+    .map-workspace-container {
+        height: 520px;
+    }
+}
+
+@media (max-width: 768px) {
+    .overview-kpi-row {
+        grid-template-columns: 1fr;
+    }
+
+    .overview-action-banner {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: var(--space-3);
+    }
+
+    .map-toolbar {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+}

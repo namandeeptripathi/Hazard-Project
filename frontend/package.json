@@ -1,0 +1,17 @@
+{
+  "name": "hazard-decision-frontend",
+  "version": "1.0.0",
+  "description": "National Disaster Decision Support & Relocation Intelligence Frontend (Stage 8A)",
+  "type": "module",
+  "scripts": {
+    "test": "node test/runTests.js"
+  },
+  "keywords": [
+    "disaster-management",
+    "relocation-intelligence",
+    "decision-support",
+    "sih"
+  ],
+  "author": "Antigravity Engineering",
+  "license": "UNLICENSED"
+}

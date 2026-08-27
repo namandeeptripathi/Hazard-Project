@@ -1,0 +1,123 @@
+/**
+ * Stage 8A — Design System Variables & Tokens
+ *
+ * Theme: Government Disaster Decision Support Platform
+ * Palette: Dark Theme, High Contrast, Institutional Polish, Subtle Elevation
+ */
+:root {
+    /* --- Neutral Color Scale --- */
+    --bg-base: #080c14;            /* Main page backdrop */
+    --bg-surface: #0f172a;         /* Panels, sidebar, header */
+    --bg-surface-elevated: #1e293b;/* Cards, popups, elevated panels */
+    --bg-surface-hover: #334155;   /* Interactive hover state */
+    --bg-surface-active: #475569;  /* Active / pressed state */
+
+    --border-subtle: #1e293b;      /* Very subtle section borders */
+    --border-default: #334155;     /* Standard card/input borders */
+    --border-strong: #475569;      /* Prominent borders / focus rings */
+    --border-focus: #38bdf8;       /* Accessibility focus ring */
+
+    --text-primary: #f8fafc;       /* High emphasis headings & primary data */
+    --text-secondary: #94a3b8;     /* Medium emphasis labels & body text */
+    --text-tertiary: #64748b;      /* Low emphasis timestamps & captions */
+    --text-disabled: #475569;      /* Disabled text */
+    --text-inverse: #0f172a;       /* Inverse high-contrast text on bright badges */
+
+    /* --- Semantic Status Color System (5.0) --- */
+    /* Critical / Red Zone / Immediate Priority */
+    --status-critical: #ef4444;
+    --status-critical-bg: rgba(239, 68, 68, 0.12);
+    --status-critical-border: rgba(239, 68, 68, 0.35);
+    --status-critical-text: #fca5a5;
+
+    /* High Risk / Warning / Short-Term Priority */
+    --status-warning: #f59e0b;
+    --status-warning-bg: rgba(245, 158, 11, 0.12);
+    --status-warning-border: rgba(245, 158, 11, 0.35);
+    --status-warning-text: #fde68a;
+
+    /* Moderate Risk / Medium-Term Priority / Secondary Accent */
+    --status-moderate: #8b5cf6;
+    --status-moderate-bg: rgba(139, 92, 246, 0.12);
+    --status-moderate-border: rgba(139, 92, 246, 0.35);
+    --status-moderate-text: #d8b4fe;
+
+    /* Safe / Feasible / Full Accommodation */
+    --status-safe: #10b981;
+    --status-safe-bg: rgba(16, 185, 129, 0.12);
+    --status-safe-border: rgba(16, 185, 129, 0.35);
+    --status-safe-text: #6ee7b7;
+
+    /* Informational / Brand Accent / Active Selection */
+    --status-info: #0284c7;
+    --status-info-bright: #38bdf8;
+    --status-info-bg: rgba(2, 132, 199, 0.12);
+    --status-info-border: rgba(2, 132, 199, 0.35);
+    --status-info-text: #7dd3fc;
+
+    /* Neutral / Monitoring / Unallocated Status */
+    --status-neutral: #64748b;
+    --status-neutral-bg: rgba(100, 116, 139, 0.12);
+    --status-neutral-border: rgba(100, 116, 139, 0.35);
+    --status-neutral-text: #cbd5e1;
+
+    /* --- Typography Scale --- */
+    --font-family-sans: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    --font-family-mono: "JetBrains Mono", "SF Mono", "Roboto Mono", Menlo, Consolas, monospace;
+
+    --font-size-2xs: 0.6875rem; /* 11px */
+    --font-size-xs: 0.75rem;    /* 12px */
+    --font-size-sm: 0.8125rem;  /* 13px */
+    --font-size-base: 0.875rem; /* 14px */
+    --font-size-md: 0.9375rem;  /* 15px */
+    --font-size-lg: 1.0625rem;  /* 17px */
+    --font-size-xl: 1.25rem;    /* 20px */
+    --font-size-2xl: 1.5rem;    /* 24px */
+    --font-size-3xl: 1.875rem;  /* 30px */
+
+    --font-weight-normal: 400;
+    --font-weight-medium: 500;
+    --font-weight-semibold: 600;
+    --font-weight-bold: 700;
+    --font-weight-extrabold: 800;
+
+    --line-height-tight: 1.2;
+    --line-height-normal: 1.45;
+    --line-height-relaxed: 1.6;
+
+    /* --- Spacing Scale --- */
+    --space-1: 0.25rem;  /* 4px */
+    --space-2: 0.5rem;   /* 8px */
+    --space-3: 0.75rem;  /* 12px */
+    --space-4: 1rem;     /* 16px */
+    --space-5: 1.25rem;  /* 20px */
+    --space-6: 1.5rem;   /* 24px */
+    --space-8: 2rem;     /* 32px */
+    --space-10: 2.5rem;  /* 40px */
+
+    /* --- Border Radius Scale --- */
+    --radius-sm: 4px;
+    --radius-md: 6px;
+    --radius-lg: 8px;
+    --radius-xl: 12px;
+    --radius-full: 9999px;
+
+    /* --- Shadows & Elevations --- */
+    --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.4);
+    --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.4), 0 2px 4px -2px rgba(0, 0, 0, 0.3);
+    --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.5), 0 4px 6px -4px rgba(0, 0, 0, 0.3);
+    --shadow-inner: inset 0 2px 4px 0 rgba(0, 0, 0, 0.4);
+
+    /* --- Layout Dimensions --- */
+    --header-height: 56px;
+    --sidebar-width: 240px;
+    --sidebar-collapsed-width: 68px;
+    --z-header: 1000;
+    --z-sidebar: 900;
+    --z-modal: 2000;
+    --z-tooltip: 3000;
+
+    /* --- Transitions --- */
+    --transition-fast: 150ms cubic-bezier(0.4, 0, 0.2, 1);
+    --transition-normal: 250ms cubic-bezier(0.4, 0, 0.2, 1);
+}
