@@ -1,6 +1,5 @@
 package com.hazard.service.risk.config;
 
-import com.hazard.domain.risk.RiskComponentType;
 import com.hazard.domain.risk.config.RiskConfigAuditEntry;
 import com.hazard.domain.risk.config.RiskConfigStatus;
 import com.hazard.domain.risk.config.RiskConfigurationProfile;

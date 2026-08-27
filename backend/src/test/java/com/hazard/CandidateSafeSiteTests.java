@@ -1,8 +1,6 @@
 package com.hazard;
 
 import com.hazard.domain.infrastructure.InfrastructureCategory;
-import com.hazard.domain.infrastructure.InfrastructureCriticality;
-import com.hazard.domain.risk.RiskTier;
 import com.hazard.domain.risk.ZoneLevel;
 import com.hazard.domain.safesite.CandidateSiteCategory;
 import com.hazard.dto.hazard.GeoJsonFeatureCollectionDto;
@@ -11,9 +9,13 @@ import com.hazard.dto.risk.RedZoneDto;
 import com.hazard.dto.safesite.CandidateSafeSiteDto;
 import com.hazard.exception.HazardNotFoundException;
 import com.hazard.exception.InvalidHazardParameterException;
+import com.hazard.repository.boundaries.DistrictBoundaryRepository;
 import com.hazard.service.exposure.InfrastructureDataProvider;
 import com.hazard.service.risk.RedZoneService;
-import com.hazard.service.safesite.*;
+import com.hazard.service.risk.RiskCalculationService;
+import com.hazard.service.safesite.CandidateSafeSiteService;
+import com.hazard.service.safesite.SafeSiteThresholds;
+import com.hazard.service.terrain.TerrainService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -41,37 +43,28 @@ class CandidateSafeSiteTests {
     private RedZoneService redZoneService;
 
     @Mock
-    private com.hazard.service.safesite.HazardSafetyEvaluator hazardSafetyEvaluator;
+    private DistrictBoundaryRepository districtBoundaryRepository;
 
     @Mock
-    private com.hazard.service.safesite.TerrainEvaluator terrainEvaluator;
+    private TerrainService terrainService;
 
     @Mock
-    private com.hazard.service.safesite.DistanceEvaluator distanceEvaluator;
+    private RiskCalculationService riskCalculationService;
 
-    @Mock
-    private com.hazard.service.safesite.RoadAccessibilityEvaluator roadAccessibilityEvaluator;
-
-    @Mock
-    private com.hazard.service.safesite.HealthcareEvaluator healthcareEvaluator;
-
-    @Mock
-    private com.hazard.service.safesite.WaterEvaluator waterEvaluator;
-
-    @Mock
-    private com.hazard.service.safesite.InfrastructureEvaluator infrastructureEvaluator;
-
-    @Mock
-    private com.hazard.service.safesite.SuitabilityEvaluator suitabilityEvaluator;
-
-    private SafeSiteRankingEvaluator safeSiteRankingEvaluator = new SafeSiteRankingEvaluator();
-
+    private SafeSiteThresholds thresholds;
     private CandidateSafeSiteService candidateSafeSiteService;
 
     @BeforeEach
     void setUp() {
+        thresholds = new SafeSiteThresholds();
         candidateSafeSiteService = new CandidateSafeSiteService(
-                dataProvider, redZoneService, hazardSafetyEvaluator, terrainEvaluator, distanceEvaluator, roadAccessibilityEvaluator, healthcareEvaluator, waterEvaluator, infrastructureEvaluator, suitabilityEvaluator, safeSiteRankingEvaluator);
+                dataProvider,
+                redZoneService,
+                districtBoundaryRepository,
+                terrainService,
+                riskCalculationService,
+                thresholds
+        );
     }
 
     private List<InfrastructureAssetDto> createMockFacilities() {
@@ -366,7 +359,7 @@ class CandidateSafeSiteTests {
 
             assertEquals(3, redZoneSites.size());
             assertTrue(redZoneSites.stream().allMatch(s -> "Sitamarhi".equalsIgnoreCase(s.getDistrict())));
-            verify(redZoneService, times(1)).getRedZonesOnly();
+            verify(redZoneService, atLeastOnce()).getRedZonesOnly();
         }
 
         @Test

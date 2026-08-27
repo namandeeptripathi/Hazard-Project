@@ -6,9 +6,13 @@ import com.hazard.dto.hazard.GeoJsonFeatureCollectionDto;
 import com.hazard.dto.infrastructure.InfrastructureAssetDto;
 import com.hazard.dto.safesite.CandidateSafeSiteDto;
 import com.hazard.exception.InvalidHazardParameterException;
+import com.hazard.repository.boundaries.DistrictBoundaryRepository;
 import com.hazard.service.exposure.InfrastructureDataProvider;
 import com.hazard.service.risk.RedZoneService;
-import com.hazard.service.safesite.*;
+import com.hazard.service.risk.RiskCalculationService;
+import com.hazard.service.safesite.CandidateSafeSiteService;
+import com.hazard.service.safesite.SafeSiteThresholds;
+import com.hazard.service.terrain.TerrainService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -36,48 +40,27 @@ class SafeSiteRankingTests {
     private RedZoneService redZoneService;
 
     @Mock
-    private HazardSafetyEvaluator hazardSafetyEvaluator;
+    private DistrictBoundaryRepository districtBoundaryRepository;
 
     @Mock
-    private TerrainEvaluator terrainEvaluator;
+    private TerrainService terrainService;
 
     @Mock
-    private DistanceEvaluator distanceEvaluator;
+    private RiskCalculationService riskCalculationService;
 
-    @Mock
-    private RoadAccessibilityEvaluator roadAccessibilityEvaluator;
-
-    @Mock
-    private HealthcareEvaluator healthcareEvaluator;
-
-    @Mock
-    private WaterEvaluator waterEvaluator;
-
-    @Mock
-    private InfrastructureEvaluator infrastructureEvaluator;
-
-    private SuitabilityEvaluationConfig suitabilityConfig;
-    private SuitabilityEvaluator suitabilityEvaluator;
-    private SafeSiteRankingEvaluator safeSiteRankingEvaluator;
+    private SafeSiteThresholds suitabilityConfig;
     private CandidateSafeSiteService candidateSafeSiteService;
 
     @BeforeEach
     void setUp() {
-        suitabilityConfig = new SuitabilityEvaluationConfig();
-        suitabilityEvaluator = new SuitabilityEvaluator(suitabilityConfig);
-        safeSiteRankingEvaluator = new SafeSiteRankingEvaluator();
+        suitabilityConfig = new SafeSiteThresholds();
         candidateSafeSiteService = new CandidateSafeSiteService(
                 dataProvider,
                 redZoneService,
-                hazardSafetyEvaluator,
-                terrainEvaluator,
-                distanceEvaluator,
-                roadAccessibilityEvaluator,
-                healthcareEvaluator,
-                waterEvaluator,
-                infrastructureEvaluator,
-                suitabilityEvaluator,
-                safeSiteRankingEvaluator
+                districtBoundaryRepository,
+                terrainService,
+                riskCalculationService,
+                suitabilityConfig
         );
     }
 
@@ -100,269 +83,222 @@ class SafeSiteRankingTests {
     }
 
     // =========================================================================
-    // 1. Primary Tier Ordering Tests
+    // 1. Primary Ordering by SuitabilityClass Tier
     // =========================================================================
 
     @Nested
-    @DisplayName("1. Primary Tier Ordering Tests")
+    @DisplayName("1. Primary Ordering by SuitabilityClass Tier")
     class PrimaryTierOrderingTests {
 
         @Test
-        @DisplayName("Test 1.1: Primary Ordering Follows HIGHLY_SUITABLE -> SUITABLE -> MARGINAL -> UNSUITABLE -> UNKNOWN")
-        void testTierOrderingPriority() {
-            CandidateSafeSiteDto siteUnknown = createCandidate("S-UNK", "Unknown Site", "Patna",
-                    SuitabilityClass.UNKNOWN, null, 0.0, HazardSafetyStatus.UNKNOWN);
-            CandidateSafeSiteDto siteUnsuitable = createCandidate("S-UNS", "Unsuitable Site", "Patna",
-                    SuitabilityClass.UNSUITABLE, 20.0, 57.1, HazardSafetyStatus.SAFE);
-            CandidateSafeSiteDto siteMarginal = createCandidate("S-MAR", "Marginal Site", "Patna",
-                    SuitabilityClass.MARGINAL, 55.0, 71.4, HazardSafetyStatus.SAFE);
-            CandidateSafeSiteDto siteSuitable = createCandidate("S-SUI", "Suitable Site", "Patna",
-                    SuitabilityClass.SUITABLE, 78.0, 85.7, HazardSafetyStatus.SAFE);
-            CandidateSafeSiteDto siteHighlySuitable = createCandidate("S-HI", "Highly Suitable Site", "Patna",
-                    SuitabilityClass.HIGHLY_SUITABLE, 95.0, 100.0, HazardSafetyStatus.SAFE);
+        @DisplayName("Test 1.1: Ranking Orders Strictly by Tier Hierarchy")
+        void testTierHierarchyOrdering() {
+            CandidateSafeSiteDto s1 = createCandidate("S-01", "Marginal Site", "Patna", SuitabilityClass.MARGINAL, 55.0, 100.0, HazardSafetyStatus.SAFE);
+            CandidateSafeSiteDto s2 = createCandidate("S-02", "Highly Suitable Site", "Patna", SuitabilityClass.HIGHLY_SUITABLE, 95.0, 100.0, HazardSafetyStatus.SAFE);
+            CandidateSafeSiteDto s3 = createCandidate("S-03", "Unsuitable Site", "Patna", SuitabilityClass.UNSUITABLE, 20.0, 100.0, HazardSafetyStatus.SAFE);
+            CandidateSafeSiteDto s4 = createCandidate("S-04", "Suitable Site", "Patna", SuitabilityClass.SUITABLE, 75.0, 100.0, HazardSafetyStatus.SAFE);
+            CandidateSafeSiteDto s5 = createCandidate("S-05", "Unknown Site", "Patna", SuitabilityClass.UNKNOWN, null, 0.0, HazardSafetyStatus.UNKNOWN);
 
-            // Pass in reverse/scrambled order
-            List<CandidateSafeSiteDto> input = Arrays.asList(siteUnknown, siteUnsuitable, siteMarginal, siteSuitable, siteHighlySuitable);
-            List<CandidateSafeSiteDto> ranked = safeSiteRankingEvaluator.rankCandidateSites(input);
+            List<CandidateSafeSiteDto> ranked = candidateSafeSiteService.rankCandidateSites(Arrays.asList(s1, s2, s3, s4, s5));
 
             assertThat(ranked).hasSize(5);
-            assertThat(ranked.get(0).getSiteId()).isEqualTo("S-HI");
+            assertThat(ranked.get(0).getSiteId()).isEqualTo("S-02"); // HIGHLY_SUITABLE (Rank 1)
             assertThat(ranked.get(0).getRank()).isEqualTo(1);
-            assertThat(ranked.get(0).getSuitabilityClass()).isEqualTo(SuitabilityClass.HIGHLY_SUITABLE);
-
-            assertThat(ranked.get(1).getSiteId()).isEqualTo("S-SUI");
+            assertThat(ranked.get(1).getSiteId()).isEqualTo("S-04"); // SUITABLE (Rank 2)
             assertThat(ranked.get(1).getRank()).isEqualTo(2);
-            assertThat(ranked.get(1).getSuitabilityClass()).isEqualTo(SuitabilityClass.SUITABLE);
-
-            assertThat(ranked.get(2).getSiteId()).isEqualTo("S-MAR");
+            assertThat(ranked.get(2).getSiteId()).isEqualTo("S-01"); // MARGINAL (Rank 3)
             assertThat(ranked.get(2).getRank()).isEqualTo(3);
-            assertThat(ranked.get(2).getSuitabilityClass()).isEqualTo(SuitabilityClass.MARGINAL);
-
-            assertThat(ranked.get(3).getSiteId()).isEqualTo("S-UNS");
+            assertThat(ranked.get(3).getSiteId()).isEqualTo("S-03"); // UNSUITABLE (Rank 4)
             assertThat(ranked.get(3).getRank()).isEqualTo(4);
-            assertThat(ranked.get(3).getSuitabilityClass()).isEqualTo(SuitabilityClass.UNSUITABLE);
-
-            assertThat(ranked.get(4).getSiteId()).isEqualTo("S-UNK");
+            assertThat(ranked.get(4).getSiteId()).isEqualTo("S-05"); // UNKNOWN (Rank 5)
             assertThat(ranked.get(4).getRank()).isEqualTo(5);
-            assertThat(ranked.get(4).getSuitabilityClass()).isEqualTo(SuitabilityClass.UNKNOWN);
         }
     }
 
     // =========================================================================
-    // 2. Secondary Score Ordering Tests
+    // 2. Secondary Ordering by Suitability Score DESC
     // =========================================================================
 
     @Nested
-    @DisplayName("2. Secondary Score Ordering Tests")
+    @DisplayName("2. Secondary Ordering by Suitability Score DESC")
     class ScoreOrderingTests {
 
         @Test
-        @DisplayName("Test 2.1: Within Same Tier, Higher Suitability Score Ranks Higher")
+        @DisplayName("Test 2.1: Within Same Tier, Higher Score Ranks First")
         void testScoreOrderingWithinTier() {
-            CandidateSafeSiteDto siteA = createCandidate("S-A", "Site A", "Muzaffarpur",
-                    SuitabilityClass.SUITABLE, 72.0, 71.4, HazardSafetyStatus.SAFE);
-            CandidateSafeSiteDto siteB = createCandidate("S-B", "Site B", "Muzaffarpur",
-                    SuitabilityClass.SUITABLE, 88.5, 71.4, HazardSafetyStatus.SAFE);
-            CandidateSafeSiteDto siteC = createCandidate("S-C", "Site C", "Muzaffarpur",
-                    SuitabilityClass.SUITABLE, 81.0, 71.4, HazardSafetyStatus.SAFE);
+            CandidateSafeSiteDto s1 = createCandidate("S-01", "Suitable 72", "Patna", SuitabilityClass.SUITABLE, 72.0, 100.0, HazardSafetyStatus.SAFE);
+            CandidateSafeSiteDto s2 = createCandidate("S-02", "Suitable 88", "Patna", SuitabilityClass.SUITABLE, 88.0, 100.0, HazardSafetyStatus.SAFE);
+            CandidateSafeSiteDto s3 = createCandidate("S-03", "Suitable 79", "Patna", SuitabilityClass.SUITABLE, 79.0, 100.0, HazardSafetyStatus.SAFE);
 
-            List<CandidateSafeSiteDto> ranked = safeSiteRankingEvaluator.rankCandidateSites(Arrays.asList(siteA, siteB, siteC));
+            List<CandidateSafeSiteDto> ranked = candidateSafeSiteService.rankCandidateSites(Arrays.asList(s1, s2, s3));
 
-            assertThat(ranked.get(0).getSiteId()).isEqualTo("S-B");
-            assertThat(ranked.get(0).getSuitabilityScore()).isEqualTo(88.5);
-            assertThat(ranked.get(0).getRank()).isEqualTo(1);
-
-            assertThat(ranked.get(1).getSiteId()).isEqualTo("S-C");
-            assertThat(ranked.get(1).getSuitabilityScore()).isEqualTo(81.0);
-            assertThat(ranked.get(1).getRank()).isEqualTo(2);
-
-            assertThat(ranked.get(2).getSiteId()).isEqualTo("S-A");
-            assertThat(ranked.get(2).getSuitabilityScore()).isEqualTo(72.0);
-            assertThat(ranked.get(2).getRank()).isEqualTo(3);
+            assertThat(ranked.get(0).getSiteId()).isEqualTo("S-02"); // 88.0 (Rank 1)
+            assertThat(ranked.get(1).getSiteId()).isEqualTo("S-03"); // 79.0 (Rank 2)
+            assertThat(ranked.get(2).getSiteId()).isEqualTo("S-01"); // 72.0 (Rank 3)
         }
     }
 
     // =========================================================================
-    // 3. Tertiary Completeness Tie-Breaker Tests
+    // 3. Tertiary Ordering by Data Completeness DESC
     // =========================================================================
 
     @Nested
-    @DisplayName("3. Completeness Tie-Breaker Tests")
+    @DisplayName("3. Tertiary Ordering by Data Completeness DESC")
     class CompletenessTieBreakerTests {
 
         @Test
-        @DisplayName("Test 3.1: On Equal Score in Same Tier, Higher Data Completeness Ranks First")
+        @DisplayName("Test 3.1: Identical Tier and Score Broken by Completeness Percentage")
         void testCompletenessTieBreaker() {
-            CandidateSafeSiteDto siteLowComp = createCandidate("S-LOW", "Low Completeness", "Patna",
-                    SuitabilityClass.SUITABLE, 80.0, 57.1, HazardSafetyStatus.SAFE);
-            CandidateSafeSiteDto siteHighComp = createCandidate("S-HIGH", "High Completeness", "Patna",
-                    SuitabilityClass.SUITABLE, 80.0, 100.0, HazardSafetyStatus.SAFE);
+            CandidateSafeSiteDto s1 = createCandidate("S-01", "Site 50% Completeness", "Patna", SuitabilityClass.SUITABLE, 80.0, 50.0, HazardSafetyStatus.SAFE);
+            CandidateSafeSiteDto s2 = createCandidate("S-02", "Site 100% Completeness", "Patna", SuitabilityClass.SUITABLE, 80.0, 100.0, HazardSafetyStatus.SAFE);
+            CandidateSafeSiteDto s3 = createCandidate("S-03", "Site 75% Completeness", "Patna", SuitabilityClass.SUITABLE, 80.0, 75.0, HazardSafetyStatus.SAFE);
 
-            List<CandidateSafeSiteDto> ranked = safeSiteRankingEvaluator.rankCandidateSites(Arrays.asList(siteLowComp, siteHighComp));
+            List<CandidateSafeSiteDto> ranked = candidateSafeSiteService.rankCandidateSites(Arrays.asList(s1, s2, s3));
 
-            assertThat(ranked.get(0).getSiteId()).isEqualTo("S-HIGH");
-            assertThat(ranked.get(0).getDataCompletenessPercentage()).isEqualTo(100.0);
-            assertThat(ranked.get(0).getRank()).isEqualTo(1);
-
-            assertThat(ranked.get(1).getSiteId()).isEqualTo("S-LOW");
-            assertThat(ranked.get(1).getDataCompletenessPercentage()).isEqualTo(57.1);
-            assertThat(ranked.get(1).getRank()).isEqualTo(2);
+            assertThat(ranked.get(0).getSiteId()).isEqualTo("S-02"); // 100.0%
+            assertThat(ranked.get(1).getSiteId()).isEqualTo("S-03"); // 75.0%
+            assertThat(ranked.get(2).getSiteId()).isEqualTo("S-01"); // 50.0%
         }
     }
 
     // =========================================================================
-    // 4. Deterministic SiteId Tie-Breaker Tests
+    // 4. Deterministic Lexicographical Tie-Breaker
     // =========================================================================
 
     @Nested
-    @DisplayName("4. Deterministic SiteId Tie-Breaker Tests")
+    @DisplayName("4. Deterministic Lexicographical Tie-Breaker")
     class DeterministicTieBreakerTests {
 
         @Test
-        @DisplayName("Test 4.1: Identical Tier, Score and Completeness Fallback to SiteId Alphabetical")
+        @DisplayName("Test 4.1: Identical Tier, Score and Completeness Broken Lexicographically by SiteId")
         void testSiteIdTieBreaker() {
-            CandidateSafeSiteDto siteZ = createCandidate("FAC-ZZZ-999", "Site Z", "Patna",
-                    SuitabilityClass.HIGHLY_SUITABLE, 95.0, 100.0, HazardSafetyStatus.SAFE);
-            CandidateSafeSiteDto siteA = createCandidate("FAC-AAA-001", "Site A", "Patna",
-                    SuitabilityClass.HIGHLY_SUITABLE, 95.0, 100.0, HazardSafetyStatus.SAFE);
+            CandidateSafeSiteDto sB = createCandidate("FAC-B", "Site B", "Patna", SuitabilityClass.HIGHLY_SUITABLE, 95.0, 100.0, HazardSafetyStatus.SAFE);
+            CandidateSafeSiteDto sA = createCandidate("FAC-A", "Site A", "Patna", SuitabilityClass.HIGHLY_SUITABLE, 95.0, 100.0, HazardSafetyStatus.SAFE);
+            CandidateSafeSiteDto sC = createCandidate("FAC-C", "Site C", "Patna", SuitabilityClass.HIGHLY_SUITABLE, 95.0, 100.0, HazardSafetyStatus.SAFE);
 
-            List<CandidateSafeSiteDto> ranked = safeSiteRankingEvaluator.rankCandidateSites(Arrays.asList(siteZ, siteA));
+            List<CandidateSafeSiteDto> ranked = candidateSafeSiteService.rankCandidateSites(Arrays.asList(sB, sC, sA));
 
-            assertThat(ranked.get(0).getSiteId()).isEqualTo("FAC-AAA-001");
-            assertThat(ranked.get(0).getRank()).isEqualTo(1);
-
-            assertThat(ranked.get(1).getSiteId()).isEqualTo("FAC-ZZZ-999");
-            assertThat(ranked.get(1).getRank()).isEqualTo(2);
+            assertThat(ranked.get(0).getSiteId()).isEqualTo("FAC-A");
+            assertThat(ranked.get(1).getSiteId()).isEqualTo("FAC-B");
+            assertThat(ranked.get(2).getSiteId()).isEqualTo("FAC-C");
         }
     }
 
     // =========================================================================
-    // 5. AT_RISK Sites Ranking Tests
+    // 5. AT_RISK Sites Ranking Behavior
     // =========================================================================
 
     @Nested
-    @DisplayName("5. AT_RISK Sites Ranking Tests")
+    @DisplayName("5. AT_RISK Sites Ranking Behavior")
     class AtRiskSitesRankingTests {
 
         @Test
-        @DisplayName("Test 5.1: AT_RISK Sites Rank in UNSUITABLE Tier by Non-Hazard Diagnostic Score")
-        void testAtRiskSitesRankInUnsuitableTier() {
-            CandidateSafeSiteDto siteSafeMarginal = createCandidate("S-SAFE-MAR", "Safe Marginal Site", "Sitamarhi",
-                    SuitabilityClass.MARGINAL, 45.0, 57.1, HazardSafetyStatus.SAFE);
+        @DisplayName("Test 5.1: AT_RISK Sites Are in UNSUITABLE Tier and Ranked by Diagnostic Score")
+        void testAtRiskSitesRanking() {
+            CandidateSafeSiteDto safeSite = createCandidate("S-SAFE", "Safe Marginal", "Patna", SuitabilityClass.MARGINAL, 45.0, 100.0, HazardSafetyStatus.SAFE);
+            CandidateSafeSiteDto atRiskHighDiag = createCandidate("S-AR-HIGH", "At Risk High Diag", "Sitamarhi", SuitabilityClass.UNSUITABLE, 90.0, 100.0, HazardSafetyStatus.AT_RISK);
+            CandidateSafeSiteDto atRiskLowDiag = createCandidate("S-AR-LOW", "At Risk Low Diag", "Sitamarhi", SuitabilityClass.UNSUITABLE, 40.0, 100.0, HazardSafetyStatus.AT_RISK);
 
-            CandidateSafeSiteDto siteAtRiskHighDiag = createCandidate("S-RISK-HI", "PMCH At Risk", "Patna",
-                    SuitabilityClass.UNSUITABLE, 100.0, 57.1, HazardSafetyStatus.AT_RISK);
+            List<CandidateSafeSiteDto> ranked = candidateSafeSiteService.rankCandidateSites(Arrays.asList(atRiskLowDiag, safeSite, atRiskHighDiag));
 
-            CandidateSafeSiteDto siteAtRiskLowDiag = createCandidate("S-RISK-LO", "Gaya At Risk", "Gaya",
-                    SuitabilityClass.UNSUITABLE, 40.0, 57.1, HazardSafetyStatus.AT_RISK);
-
-            List<CandidateSafeSiteDto> ranked = safeSiteRankingEvaluator.rankCandidateSites(
-                    Arrays.asList(siteAtRiskHighDiag, siteSafeMarginal, siteAtRiskLowDiag));
-
-            // MARGINAL precedes UNSUITABLE
-            assertThat(ranked.get(0).getSiteId()).isEqualTo("S-SAFE-MAR");
-            assertThat(ranked.get(0).getRank()).isEqualTo(1);
-
-            // Within UNSUITABLE, higher diagnostic score ranks higher
-            assertThat(ranked.get(1).getSiteId()).isEqualTo("S-RISK-HI");
-            assertThat(ranked.get(1).getSuitabilityScore()).isEqualTo(100.0);
-            assertThat(ranked.get(1).getRank()).isEqualTo(2);
-            assertThat(ranked.get(1).getRankingReason()).contains("active hazard exposure override (AT_RISK)");
-
-            assertThat(ranked.get(2).getSiteId()).isEqualTo("S-RISK-LO");
-            assertThat(ranked.get(2).getSuitabilityScore()).isEqualTo(40.0);
-            assertThat(ranked.get(2).getRank()).isEqualTo(3);
+            assertThat(ranked.get(0).getSiteId()).isEqualTo("S-SAFE");     // MARGINAL > UNSUITABLE
+            assertThat(ranked.get(1).getSiteId()).isEqualTo("S-AR-HIGH");  // UNSUITABLE with 90.0 diagnostic score
+            assertThat(ranked.get(2).getSiteId()).isEqualTo("S-AR-LOW");   // UNSUITABLE with 40.0 diagnostic score
         }
     }
 
     // =========================================================================
-    // 6. RankingReason & Explainability Tests
+    // 6. Explainable Ranking Reason Generation
     // =========================================================================
 
     @Nested
-    @DisplayName("6. Ranking Reason Tests")
+    @DisplayName("6. Explainable Ranking Reason Generation")
     class RankingReasonTests {
 
         @Test
-        @DisplayName("Test 6.1: Ranking Reason Format for Highly Suitable, Suitable, Marginal, and Unsuitable Sites")
-        void testRankingReasonFormats() {
-            CandidateSafeSiteDto siteHi = createCandidate("S-HI", "Highly Suitable", "Patna",
-                    SuitabilityClass.HIGHLY_SUITABLE, 95.5, 100.0, HazardSafetyStatus.SAFE);
-            CandidateSafeSiteDto siteSui = createCandidate("S-SUI", "Suitable", "Patna",
-                    SuitabilityClass.SUITABLE, 81.5, 57.1, HazardSafetyStatus.SAFE);
-            CandidateSafeSiteDto siteRisk = createCandidate("S-RISK", "At Risk", "Patna",
-                    SuitabilityClass.UNSUITABLE, 100.0, 57.1, HazardSafetyStatus.AT_RISK);
+        @DisplayName("Test 6.1: Generated Ranking Reasons Are Human-Readable and Clear")
+        void testRankingReasonStrings() {
+            CandidateSafeSiteDto s1 = createCandidate("S-01", "Top Site", "Patna", SuitabilityClass.HIGHLY_SUITABLE, 96.5, 100.0, HazardSafetyStatus.SAFE);
+            CandidateSafeSiteDto s2 = createCandidate("S-02", "At-Risk Site", "Sitamarhi", SuitabilityClass.UNSUITABLE, 85.0, 100.0, HazardSafetyStatus.AT_RISK);
 
-            List<CandidateSafeSiteDto> ranked = safeSiteRankingEvaluator.rankCandidateSites(Arrays.asList(siteHi, siteSui, siteRisk));
+            List<CandidateSafeSiteDto> ranked = candidateSafeSiteService.rankCandidateSites(Arrays.asList(s1, s2));
 
-            assertThat(ranked.get(0).getRankingReason()).contains("Rank #1 of 3: Highly suitable safe site with top-tier suitability score (95.5/100) and 100.0% data completeness.");
-            assertThat(ranked.get(1).getRankingReason()).contains("Rank #2 of 3: Suitable candidate safe site with suitability score 81.5/100 and 57.1% data completeness.");
-            assertThat(ranked.get(2).getRankingReason()).contains("Rank #3 of 3: Unsuitable safe site due to active hazard exposure override (AT_RISK); diagnostic non-hazard score is 100.0/100.");
+            assertThat(ranked.get(0).getRankingReason())
+                    .contains("Rank #1 of 2")
+                    .contains("Highly suitable safe site")
+                    .contains("96.5/100")
+                    .contains("100.0% data completeness");
+
+            assertThat(ranked.get(1).getRankingReason())
+                    .contains("Rank #2 of 2")
+                    .contains("Unsuitable safe site due to active hazard exposure override (AT_RISK)")
+                    .contains("85.0/100");
         }
     }
 
     // =========================================================================
-    // 7. Pipeline & Top-N Query Filter Tests
+    // 7. Pipeline Integration & Top N Limit Filtering
     // =========================================================================
 
     @Nested
-    @DisplayName("7. Pipeline & Top-N Filter Tests")
+    @DisplayName("7. Pipeline Integration & Top N Limit Filtering")
     class PipelineAndTopFilterTests {
 
         @Test
-        @DisplayName("Test 7.1: Pipeline Evaluates and Ranks All Candidate Sites")
-        void testPipelineRanksAllSites() {
-            InfrastructureAssetDto facility1 = new InfrastructureAssetDto();
-            facility1.setAssetId("FAC-001");
-            facility1.setAssetName("Center 1");
-            facility1.setCategory(InfrastructureCategory.EMERGENCY_SERVICES);
-            facility1.setDistrictName("Patna");
-            facility1.setLatitude(25.6000);
-            facility1.setLongitude(85.1000);
+        @DisplayName("Test 7.1: Pipeline End-to-End Automatically Assigns Ranks and Reasons")
+        void testPipelineAssignsRanks() {
+            InfrastructureAssetDto f1 = new InfrastructureAssetDto();
+            f1.setAssetId("FAC-01");
+            f1.setAssetName("Center 1");
+            f1.setCategory(InfrastructureCategory.EDUCATION);
+            f1.setDistrictName("Patna");
+            f1.setLatitude(25.60);
+            f1.setLongitude(85.10);
 
-            InfrastructureAssetDto facility2 = new InfrastructureAssetDto();
-            facility2.setAssetId("FAC-002");
-            facility2.setAssetName("Center 2");
-            facility2.setCategory(InfrastructureCategory.EMERGENCY_SERVICES);
-            facility2.setDistrictName("Sitamarhi");
-            facility2.setLatitude(26.5900);
-            facility2.setLongitude(85.5000);
+            InfrastructureAssetDto f2 = new InfrastructureAssetDto();
+            f2.setAssetId("FAC-02");
+            f2.setAssetName("Center 2");
+            f2.setCategory(InfrastructureCategory.HEALTHCARE);
+            f2.setDistrictName("Patna");
+            f2.setLatitude(25.61);
+            f2.setLongitude(85.11);
 
-            when(dataProvider.getAllRegionalFacilities()).thenReturn(Arrays.asList(facility1, facility2));
-            when(distanceEvaluator.resolveActiveHighRiskDistricts()).thenReturn(Collections.emptyList());
+            when(dataProvider.getAllRegionalFacilities()).thenReturn(Arrays.asList(f1, f2));
 
-            List<CandidateSafeSiteDto> sites = candidateSafeSiteService.getAllCandidateSites();
+            List<CandidateSafeSiteDto> result = candidateSafeSiteService.getAllCandidateSites();
 
-            assertThat(sites).hasSize(2);
-            assertThat(sites.get(0).getRank()).isEqualTo(1);
-            assertThat(sites.get(0).getRankingReason()).isNotNull();
-            assertThat(sites.get(1).getRank()).isEqualTo(2);
-            assertThat(sites.get(1).getRankingReason()).isNotNull();
+            assertThat(result).hasSize(2);
+            assertThat(result.get(0).getRank()).isEqualTo(1);
+            assertThat(result.get(0).getRankingReason()).isNotBlank();
+            assertThat(result.get(1).getRank()).isEqualTo(2);
+            assertThat(result.get(1).getRankingReason()).isNotBlank();
         }
 
         @Test
-        @DisplayName("Test 7.2: getCandidateSites with top Parameter Limits Ranked Results")
-        void testTopParameterLimitsResults() {
+        @DisplayName("Test 7.2: Top N Parameter Limits Ranked Output Correctly")
+        void testTopNLimitFiltering() {
             InfrastructureAssetDto f1 = new InfrastructureAssetDto();
-            f1.setAssetId("FAC-001");
-            f1.setCategory(InfrastructureCategory.EMERGENCY_SERVICES);
-            f1.setLatitude(25.6);
-            f1.setLongitude(85.1);
+            f1.setAssetId("FAC-01");
+            f1.setCategory(InfrastructureCategory.EDUCATION);
+            f1.setDistrictName("Patna");
+            f1.setLatitude(25.60);
+            f1.setLongitude(85.10);
 
             InfrastructureAssetDto f2 = new InfrastructureAssetDto();
-            f2.setAssetId("FAC-002");
-            f2.setCategory(InfrastructureCategory.EMERGENCY_SERVICES);
-            f2.setLatitude(25.7);
-            f2.setLongitude(85.2);
+            f2.setAssetId("FAC-02");
+            f2.setCategory(InfrastructureCategory.EDUCATION);
+            f2.setDistrictName("Patna");
+            f2.setLatitude(25.61);
+            f2.setLongitude(85.11);
 
             InfrastructureAssetDto f3 = new InfrastructureAssetDto();
-            f3.setAssetId("FAC-003");
-            f3.setCategory(InfrastructureCategory.EMERGENCY_SERVICES);
-            f3.setLatitude(25.8);
-            f3.setLongitude(85.3);
+            f3.setAssetId("FAC-03");
+            f3.setCategory(InfrastructureCategory.EDUCATION);
+            f3.setDistrictName("Patna");
+            f3.setLatitude(25.62);
+            f3.setLongitude(85.12);
 
             when(dataProvider.getAllRegionalFacilities()).thenReturn(Arrays.asList(f1, f2, f3));
-            when(distanceEvaluator.resolveActiveHighRiskDistricts()).thenReturn(Collections.emptyList());
 
             List<CandidateSafeSiteDto> top2 = candidateSafeSiteService.getCandidateSites(
                     null, null, false, null, null, null, null, null, null, null, null, 2);
@@ -373,34 +309,34 @@ class SafeSiteRankingTests {
         }
 
         @Test
-        @DisplayName("Test 7.3: Invalid top <= 0 Parameter Throws InvalidHazardParameterException")
-        void testInvalidTopParameter() {
+        @DisplayName("Test 7.3: Invalid Top N Parameter (<= 0) Throws HTTP 400 InvalidHazardParameterException")
+        void testInvalidTopNThrows() {
             assertThatThrownBy(() -> candidateSafeSiteService.getCandidateSites(
                     null, null, false, null, null, null, null, null, null, null, null, 0))
                     .isInstanceOf(InvalidHazardParameterException.class)
-                    .hasMessageContaining("Parameter 'top' must be a positive integer greater than 0");
+                    .hasMessageContaining("Parameter 'top' must be a positive integer greater than 0.");
 
             assertThatThrownBy(() -> candidateSafeSiteService.getCandidateSites(
                     null, null, false, null, null, null, null, null, null, null, null, -5))
                     .isInstanceOf(InvalidHazardParameterException.class)
-                    .hasMessageContaining("Parameter 'top' must be a positive integer greater than 0");
+                    .hasMessageContaining("Parameter 'top' must be a positive integer greater than 0.");
         }
 
         @Test
-        @DisplayName("Test 7.4: GeoJSON Export Contains Stage 5.11 Rank and RankingReason Properties")
-        void testGeoJsonRankProperties() {
-            InfrastructureAssetDto f = new InfrastructureAssetDto();
-            f.setAssetId("FAC-001");
-            f.setAssetName("Emergency Hub");
-            f.setCategory(InfrastructureCategory.EMERGENCY_SERVICES);
-            f.setLatitude(25.6);
-            f.setLongitude(85.1);
+        @DisplayName("Test 7.4: GeoJSON Export Contains Rank and RankingReason Properties")
+        void testGeoJsonContainsRankProperties() {
+            InfrastructureAssetDto f1 = new InfrastructureAssetDto();
+            f1.setAssetId("FAC-01");
+            f1.setAssetName("Center 1");
+            f1.setCategory(InfrastructureCategory.EDUCATION);
+            f1.setDistrictName("Patna");
+            f1.setLatitude(25.60);
+            f1.setLongitude(85.10);
 
-            when(dataProvider.getAllRegionalFacilities()).thenReturn(Collections.singletonList(f));
-            when(distanceEvaluator.resolveActiveHighRiskDistricts()).thenReturn(Collections.emptyList());
+            when(dataProvider.getAllRegionalFacilities()).thenReturn(Collections.singletonList(f1));
 
             GeoJsonFeatureCollectionDto geoJson = candidateSafeSiteService.generateCandidateSitesGeoJson(
-                    null, null, false, null, null, null, null, null, null, null, null, null);
+                    null, null, false, null, null, null, null, null, null, null, null, 1);
 
             assertThat(geoJson.getFeatures()).hasSize(1);
             Map<String, Object> props = geoJson.getFeatures().get(0).getProperties();

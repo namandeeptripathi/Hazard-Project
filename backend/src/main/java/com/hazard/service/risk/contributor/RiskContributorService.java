@@ -3,7 +3,6 @@ package com.hazard.service.risk.contributor;
 import com.hazard.domain.historical.HistoricalTimeWindow;
 import com.hazard.dto.historical.DistrictHistoricalSummaryDto;
 import com.hazard.dto.risk.DistrictRiskScoreDto;
-import com.hazard.dto.risk.config.RiskScenarioAnalysisRequestDto;
 import com.hazard.dto.risk.contributor.ContributorTreeNodeDto;
 import com.hazard.dto.risk.contributor.DetailedRiskContributorDto;
 import com.hazard.dto.risk.contributor.DistrictRiskContributorsProfileDto;

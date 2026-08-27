@@ -1,6 +1,5 @@
 package com.hazard.service.risk.explain;
 
-import com.hazard.domain.risk.RiskTier;
 import com.hazard.domain.risk.config.RiskConfigurationProfile;
 import com.hazard.domain.risk.explain.EvidenceType;
 import com.hazard.domain.risk.explain.SensitivityImpactTier;

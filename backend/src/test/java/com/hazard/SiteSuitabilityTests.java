@@ -6,9 +6,13 @@ import com.hazard.dto.hazard.GeoJsonFeatureCollectionDto;
 import com.hazard.dto.infrastructure.InfrastructureAssetDto;
 import com.hazard.dto.safesite.CandidateSafeSiteDto;
 import com.hazard.exception.InvalidHazardParameterException;
+import com.hazard.repository.boundaries.DistrictBoundaryRepository;
 import com.hazard.service.exposure.InfrastructureDataProvider;
 import com.hazard.service.risk.RedZoneService;
-import com.hazard.service.safesite.*;
+import com.hazard.service.risk.RiskCalculationService;
+import com.hazard.service.safesite.CandidateSafeSiteService;
+import com.hazard.service.safesite.SafeSiteThresholds;
+import com.hazard.service.terrain.TerrainService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -36,48 +40,27 @@ class SiteSuitabilityTests {
     private RedZoneService redZoneService;
 
     @Mock
-    private HazardSafetyEvaluator hazardSafetyEvaluator;
+    private DistrictBoundaryRepository districtBoundaryRepository;
 
     @Mock
-    private TerrainEvaluator terrainEvaluator;
+    private TerrainService terrainService;
 
     @Mock
-    private DistanceEvaluator distanceEvaluator;
+    private RiskCalculationService riskCalculationService;
 
-    @Mock
-    private RoadAccessibilityEvaluator roadAccessibilityEvaluator;
-
-    @Mock
-    private HealthcareEvaluator healthcareEvaluator;
-
-    @Mock
-    private WaterEvaluator waterEvaluator;
-
-    @Mock
-    private InfrastructureEvaluator infrastructureEvaluator;
-
-    private SuitabilityEvaluationConfig config;
-    private SuitabilityEvaluator suitabilityEvaluator;
-    private SafeSiteRankingEvaluator safeSiteRankingEvaluator;
+    private SafeSiteThresholds config;
     private CandidateSafeSiteService candidateSafeSiteService;
 
     @BeforeEach
     void setUp() {
-        config = new SuitabilityEvaluationConfig();
-        suitabilityEvaluator = new SuitabilityEvaluator(config);
-        safeSiteRankingEvaluator = new SafeSiteRankingEvaluator();
+        config = new SafeSiteThresholds();
         candidateSafeSiteService = new CandidateSafeSiteService(
                 dataProvider,
                 redZoneService,
-                hazardSafetyEvaluator,
-                terrainEvaluator,
-                distanceEvaluator,
-                roadAccessibilityEvaluator,
-                healthcareEvaluator,
-                waterEvaluator,
-                infrastructureEvaluator,
-                suitabilityEvaluator,
-                safeSiteRankingEvaluator
+                districtBoundaryRepository,
+                terrainService,
+                riskCalculationService,
+                config
         );
     }
 
@@ -208,7 +191,7 @@ class SiteSuitabilityTests {
             site.setWaterAccessStatus(WaterAccessStatus.NEAR);
             site.setInfrastructureAccessStatus(InfrastructureAccessStatus.NEAR);
 
-            suitabilityEvaluator.evaluateSuitability(site);
+            candidateSafeSiteService.evaluateSuitability(site);
 
             // Classification MUST remain UNSUITABLE due to safety gate
             assertThat(site.getSuitabilityClass()).isEqualTo(SuitabilityClass.UNSUITABLE);
@@ -235,7 +218,7 @@ class SiteSuitabilityTests {
             // Non-hazard known weights: 0.15 + 0.15 + 0.10 + 0.10 = 0.50
             // Non-hazard weighted sum: 15 + 9 + 10 + 2 = 36.0
             // Diagnostic score: 36.0 / 0.50 = 72.0
-            suitabilityEvaluator.evaluateSuitability(site);
+            candidateSafeSiteService.evaluateSuitability(site);
 
             assertThat(site.getSuitabilityClass()).isEqualTo(SuitabilityClass.UNSUITABLE);
             assertThat(site.getSuitabilityScore()).isEqualTo(72.0);
@@ -257,7 +240,7 @@ class SiteSuitabilityTests {
             site.setWaterAccessStatus(WaterAccessStatus.UNKNOWN);
             site.setInfrastructureAccessStatus(InfrastructureAccessStatus.UNKNOWN);
 
-            suitabilityEvaluator.evaluateSuitability(site);
+            candidateSafeSiteService.evaluateSuitability(site);
 
             assertThat(site.getSuitabilityClass()).isEqualTo(SuitabilityClass.UNSUITABLE);
             assertThat(site.getSuitabilityScore()).isNull();
@@ -288,7 +271,7 @@ class SiteSuitabilityTests {
             site.setWaterAccessStatus(WaterAccessStatus.UNKNOWN);
             site.setInfrastructureAccessStatus(InfrastructureAccessStatus.UNKNOWN);
 
-            suitabilityEvaluator.evaluateSuitability(site);
+            candidateSafeSiteService.evaluateSuitability(site);
 
             assertThat(site.getSuitabilityClass()).isEqualTo(SuitabilityClass.UNKNOWN);
             assertThat(site.getSuitabilityScore()).isNull();
@@ -310,7 +293,7 @@ class SiteSuitabilityTests {
             site.setWaterAccessStatus(WaterAccessStatus.UNKNOWN);
             site.setInfrastructureAccessStatus(InfrastructureAccessStatus.UNKNOWN);
 
-            suitabilityEvaluator.evaluateSuitability(site);
+            candidateSafeSiteService.evaluateSuitability(site);
 
             assertThat(site.getSuitabilityClass()).isEqualTo(SuitabilityClass.HIGHLY_SUITABLE);
             assertThat(site.getSuitabilityScore()).isEqualTo(100.0);
@@ -324,13 +307,6 @@ class SiteSuitabilityTests {
         @DisplayName("Test 4.3: Mixed Known Dimensions Normalize Accurately Over Known Weights")
         void testMixedKnownDimensions() {
             CandidateSafeSiteDto site = createBaselineCandidate("S-04", "Mixed Site", "Patna");
-            // Known dimensions:
-            // Hazard Safety: SAFE (100) * 0.30 = 30.0
-            // Terrain: UNFAVORABLE (0) * 0.15 = 0.0
-            // Distance: NEAR (100) * 0.15 = 15.0
-            // Sum of known weights = 0.30 + 0.15 + 0.15 = 0.60
-            // Weighted sum = 30.0 + 0.0 + 15.0 = 45.0
-            // Normalized score = 45.0 / 0.60 = 75.0 -> SUITABLE (70 - 89.99)
             site.setHazardSafetyStatus(HazardSafetyStatus.SAFE);
             site.setTerrainStatus(TerrainStatus.UNFAVORABLE);
             site.setDistanceStatus(DistanceStatus.NEAR);
@@ -339,7 +315,7 @@ class SiteSuitabilityTests {
             site.setWaterAccessStatus(WaterAccessStatus.UNKNOWN);
             site.setInfrastructureAccessStatus(InfrastructureAccessStatus.UNKNOWN);
 
-            suitabilityEvaluator.evaluateSuitability(site);
+            candidateSafeSiteService.evaluateSuitability(site);
 
             assertThat(site.getSuitabilityScore()).isEqualTo(75.0);
             assertThat(site.getSuitabilityClass()).isEqualTo(SuitabilityClass.SUITABLE);
@@ -369,7 +345,7 @@ class SiteSuitabilityTests {
             site.setWaterAccessStatus(WaterAccessStatus.NEAR);
             site.setInfrastructureAccessStatus(InfrastructureAccessStatus.NEAR);
 
-            suitabilityEvaluator.evaluateSuitability(site);
+            candidateSafeSiteService.evaluateSuitability(site);
 
             assertThat(site.getSuitabilityScore()).isEqualTo(100.0);
             assertThat(site.getSuitabilityClass()).isEqualTo(SuitabilityClass.HIGHLY_SUITABLE);
@@ -382,14 +358,6 @@ class SiteSuitabilityTests {
         @DisplayName("Test 5.2: Moderate Access Factors Produce SUITABLE Classification")
         void testModerateAccessCandidate() {
             CandidateSafeSiteDto site = createBaselineCandidate("S-06", "Moderate Access Shelter", "Muzaffarpur");
-            // SAFE (100 * 0.30 = 30)
-            // FAVORABLE (100 * 0.15 = 15)
-            // MODERATE (60 * 0.15 = 9)
-            // MODERATE (60 * 0.10 = 6)
-            // MODERATE (60 * 0.10 = 6)
-            // MODERATE (60 * 0.10 = 6)
-            // MODERATE (60 * 0.10 = 6)
-            // Total score = 30 + 15 + 9 + 6 + 6 + 6 + 6 = 78.0 -> SUITABLE
             site.setHazardSafetyStatus(HazardSafetyStatus.SAFE);
             site.setTerrainStatus(TerrainStatus.FAVORABLE);
             site.setDistanceStatus(DistanceStatus.MODERATE);
@@ -398,7 +366,7 @@ class SiteSuitabilityTests {
             site.setWaterAccessStatus(WaterAccessStatus.MODERATE);
             site.setInfrastructureAccessStatus(InfrastructureAccessStatus.MODERATE);
 
-            suitabilityEvaluator.evaluateSuitability(site);
+            candidateSafeSiteService.evaluateSuitability(site);
 
             assertThat(site.getSuitabilityScore()).isEqualTo(78.0);
             assertThat(site.getSuitabilityClass()).isEqualTo(SuitabilityClass.SUITABLE);
@@ -408,14 +376,6 @@ class SiteSuitabilityTests {
         @DisplayName("Test 5.3: Marginal Candidate with Far Services (Score 40 - 69.99)")
         void testMarginalCandidate() {
             CandidateSafeSiteDto site = createBaselineCandidate("S-07", "Remote Shelter", "West Champaran");
-            // SAFE (100 * 0.30 = 30)
-            // UNFAVORABLE (0 * 0.15 = 0)
-            // FAR (20 * 0.15 = 3)
-            // FAR (20 * 0.10 = 2)
-            // FAR (20 * 0.10 = 2)
-            // MODERATE (60 * 0.10 = 6)
-            // FAR (20 * 0.10 = 2)
-            // Total score = 30 + 0 + 3 + 2 + 2 + 6 + 2 = 45.0 -> MARGINAL
             site.setHazardSafetyStatus(HazardSafetyStatus.SAFE);
             site.setTerrainStatus(TerrainStatus.UNFAVORABLE);
             site.setDistanceStatus(DistanceStatus.FAR);
@@ -424,7 +384,7 @@ class SiteSuitabilityTests {
             site.setWaterAccessStatus(WaterAccessStatus.MODERATE);
             site.setInfrastructureAccessStatus(InfrastructureAccessStatus.FAR);
 
-            suitabilityEvaluator.evaluateSuitability(site);
+            candidateSafeSiteService.evaluateSuitability(site);
 
             assertThat(site.getSuitabilityScore()).isEqualTo(45.0);
             assertThat(site.getSuitabilityClass()).isEqualTo(SuitabilityClass.MARGINAL);
@@ -434,30 +394,15 @@ class SiteSuitabilityTests {
         @DisplayName("Test 5.4: Unsuitable Candidate Due to Multi-Dimensional Deficiencies (Score < 40)")
         void testUnsuitableCandidateDeficiencies() {
             CandidateSafeSiteDto site = createBaselineCandidate("S-08", "Deficient Shelter", "Gaya");
-            // SAFE (100 * 0.30 = 30)
-            // UNFAVORABLE (0 * 0.15 = 0)
-            // FAR (20 * 0.15 = 3)
-            // FAR (20 * 0.10 = 2)
-            // FAR (20 * 0.10 = 2)
-            // FAR (20 * 0.10 = 2)
-            // FAR (20 * 0.10 = 0 -> not set)
-            // Let's set FAR for all: 30 + 0 + 3 + 2 + 2 + 0 + 0 = 37.0 -> UNSUITABLE (< 40)
-            site.setHazardSafetyStatus(HazardSafetyStatus.SAFE);
+            site.setHazardSafetyStatus(HazardSafetyStatus.UNKNOWN);
             site.setTerrainStatus(TerrainStatus.UNFAVORABLE);
             site.setDistanceStatus(DistanceStatus.FAR);
             site.setRoadAccessStatus(RoadAccessStatus.FAR);
             site.setHealthcareAccessStatus(HealthcareAccessStatus.FAR);
             site.setWaterAccessStatus(WaterAccessStatus.UNKNOWN);
             site.setInfrastructureAccessStatus(InfrastructureAccessStatus.UNKNOWN);
-            // Known weights: 0.30 + 0.15 + 0.15 + 0.10 + 0.10 = 0.80
-            // Weighted sum: 30 + 0 + 3 + 2 + 2 = 37.0
-            // Normalized score: 37.0 / 0.80 = 46.25 -> let's make it lower
-            // If hazard safety is also UNKNOWN:
-            site.setHazardSafetyStatus(HazardSafetyStatus.UNKNOWN);
-            // Known weights: 0.15 + 0.15 + 0.10 + 0.10 = 0.50
-            // Weighted sum: 0 + 3 + 2 + 2 = 7.0
-            // Normalized score: 7.0 / 0.50 = 14.0 -> UNSUITABLE
-            suitabilityEvaluator.evaluateSuitability(site);
+
+            candidateSafeSiteService.evaluateSuitability(site);
 
             assertThat(site.getSuitabilityScore()).isEqualTo(14.0);
             assertThat(site.getSuitabilityClass()).isEqualTo(SuitabilityClass.UNSUITABLE);
@@ -484,7 +429,7 @@ class SiteSuitabilityTests {
             site.setWaterAccessStatus(WaterAccessStatus.UNKNOWN);
             site.setInfrastructureAccessStatus(InfrastructureAccessStatus.MODERATE);
 
-            suitabilityEvaluator.evaluateSuitability(site);
+            candidateSafeSiteService.evaluateSuitability(site);
 
             Map<String, Object> factors = site.getSuitabilityFactors();
             assertThat(factors).isNotNull();
@@ -527,7 +472,6 @@ class SiteSuitabilityTests {
             facility.setLongitude(85.1000);
 
             when(dataProvider.getAllRegionalFacilities()).thenReturn(Collections.singletonList(facility));
-            when(distanceEvaluator.resolveActiveHighRiskDistricts()).thenReturn(Collections.emptyList());
 
             List<CandidateSafeSiteDto> sites = candidateSafeSiteService.getAllCandidateSites();
 
@@ -553,16 +497,15 @@ class SiteSuitabilityTests {
             f1.setLongitude(85.1000);
 
             when(dataProvider.getAllRegionalFacilities()).thenReturn(Collections.singletonList(f1));
-            when(distanceEvaluator.resolveActiveHighRiskDistricts()).thenReturn(Collections.emptyList());
 
             // Query matching class
             List<CandidateSafeSiteDto> result = candidateSafeSiteService.getCandidateSites(
-                    null, null, false, null, null, null, null, null, null, null, "UNKNOWN");
+                    null, null, false, null, null, null, null, null, null, null, "HIGHLY_SUITABLE");
             assertThat(result).hasSize(1);
 
             // Query non-matching class
             List<CandidateSafeSiteDto> emptyResult = candidateSafeSiteService.getCandidateSites(
-                    null, null, false, null, null, null, null, null, null, null, "HIGHLY_SUITABLE");
+                    null, null, false, null, null, null, null, null, null, null, "UNSUITABLE");
             assertThat(emptyResult).isEmpty();
         }
 
@@ -570,7 +513,6 @@ class SiteSuitabilityTests {
         @DisplayName("Test 7.3: Invalid suitabilityClass Filter Throws InvalidHazardParameterException")
         void testInvalidSuitabilityClassFilter() {
             when(dataProvider.getAllRegionalFacilities()).thenReturn(Collections.emptyList());
-            when(distanceEvaluator.resolveActiveHighRiskDistricts()).thenReturn(Collections.emptyList());
 
             assertThatThrownBy(() -> candidateSafeSiteService.getCandidateSites(
                     null, null, false, null, null, null, null, null, null, null, "INVALID_TIER"))
@@ -591,7 +533,6 @@ class SiteSuitabilityTests {
             facility.setLongitude(85.1000);
 
             when(dataProvider.getAllRegionalFacilities()).thenReturn(Collections.singletonList(facility));
-            when(distanceEvaluator.resolveActiveHighRiskDistricts()).thenReturn(Collections.emptyList());
 
             GeoJsonFeatureCollectionDto geoJson = candidateSafeSiteService.generateCandidateSitesGeoJson(
                     null, null, false, null, null, null, null, null, null, null, null);

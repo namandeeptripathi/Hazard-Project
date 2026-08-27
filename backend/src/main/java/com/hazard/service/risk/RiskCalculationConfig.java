@@ -1,7 +1,6 @@
 package com.hazard.service.risk;
 
 import com.hazard.domain.risk.RiskComponentType;
-import com.hazard.domain.risk.RiskTier;
 import org.springframework.stereotype.Component;
 
 import java.util.Collections;

@@ -1,6 +1,5 @@
 package com.hazard.service.validation;
 
-import com.hazard.domain.boundaries.DistrictBoundary;
 import com.hazard.domain.hazard.*;
 import com.hazard.dto.scoring.HazardScoreDto;
 import com.hazard.dto.validation.*;

@@ -8,9 +8,12 @@ import com.hazard.dto.hazard.GeoJsonFeatureCollectionDto;
 import com.hazard.dto.infrastructure.InfrastructureAssetDto;
 import com.hazard.dto.safesite.CandidateSafeSiteDto;
 import com.hazard.exception.InvalidHazardParameterException;
+import com.hazard.repository.boundaries.DistrictBoundaryRepository;
 import com.hazard.service.exposure.InfrastructureDataProvider;
 import com.hazard.service.risk.RedZoneService;
-import com.hazard.service.safesite.*;
+import com.hazard.service.risk.RiskCalculationService;
+import com.hazard.service.safesite.CandidateSafeSiteService;
+import com.hazard.service.safesite.SafeSiteThresholds;
 import com.hazard.service.terrain.TerrainService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -44,37 +47,27 @@ class TerrainIntelligenceTests {
     private RedZoneService redZoneService;
 
     @Mock
-    private HazardSafetyEvaluator hazardSafetyEvaluator;
+    private DistrictBoundaryRepository districtBoundaryRepository;
 
     @Mock
-    private DistanceEvaluator distanceEvaluator;
+    private RiskCalculationService riskCalculationService;
 
-    @Mock
-    private com.hazard.service.safesite.RoadAccessibilityEvaluator roadAccessibilityEvaluator;
-
-    @Mock
-    private com.hazard.service.safesite.HealthcareEvaluator healthcareEvaluator;
-
-    @Mock
-    private com.hazard.service.safesite.WaterEvaluator waterEvaluator;
-
-    @Mock
-    private com.hazard.service.safesite.InfrastructureEvaluator infrastructureEvaluator;
-
-    @Mock
-    private com.hazard.service.safesite.SuitabilityEvaluator suitabilityEvaluator;
-
-    private TerrainEvaluationConfig config;
-    private TerrainEvaluator terrainEvaluator;
-    private SafeSiteRankingEvaluator safeSiteRankingEvaluator = new SafeSiteRankingEvaluator();
+    private SafeSiteThresholds thresholds;
     private CandidateSafeSiteService candidateSafeSiteService;
 
     @BeforeEach
     void setUp() {
-        config = new TerrainEvaluationConfig(5.0, 15.0);
-        terrainEvaluator = new TerrainEvaluator(terrainService, config);
+        thresholds = new SafeSiteThresholds();
+        thresholds.setMaxFavorableSlopeDegrees(5.0);
+        thresholds.setMinUnfavorableSlopeDegrees(15.0);
         candidateSafeSiteService = new CandidateSafeSiteService(
-                dataProvider, redZoneService, hazardSafetyEvaluator, terrainEvaluator, distanceEvaluator, roadAccessibilityEvaluator, healthcareEvaluator, waterEvaluator, infrastructureEvaluator, suitabilityEvaluator, safeSiteRankingEvaluator);
+                dataProvider,
+                redZoneService,
+                districtBoundaryRepository,
+                terrainService,
+                riskCalculationService,
+                thresholds
+        );
     }
 
     private DemTile createMockDemTile(String name, double minElev, double maxElev) {
@@ -125,11 +118,11 @@ class TerrainIntelligenceTests {
     }
 
     // =========================================================================
-    // 2. TerrainEvaluator Slope & Elevation Evaluation Tests
+    // 2. Terrain Slope & Elevation Evaluation Tests
     // =========================================================================
 
     @Nested
-    @DisplayName("5.4.2: TerrainEvaluator Evidence-Based Assessment")
+    @DisplayName("5.4.2: Terrain Slope & Elevation Assessment")
     class EvaluatorTests {
 
         @Test
@@ -142,7 +135,7 @@ class TerrainIntelligenceTests {
             site.setElevationMeters(58.4);
             site.setSlopeDegrees(2.1);
 
-            terrainEvaluator.evaluateTerrain(site);
+            candidateSafeSiteService.evaluateTerrain(site);
 
             assertEquals(TerrainStatus.FAVORABLE, site.getTerrainStatus());
             assertEquals(58.4, site.getElevationMeters());
@@ -162,7 +155,7 @@ class TerrainIntelligenceTests {
             site.setElevationMeters(180.0);
             site.setSlopeDegrees(18.5);
 
-            terrainEvaluator.evaluateTerrain(site);
+            candidateSafeSiteService.evaluateTerrain(site);
 
             assertEquals(TerrainStatus.UNFAVORABLE, site.getTerrainStatus());
             assertEquals(18.5, site.getSlopeDegrees());
@@ -180,7 +173,7 @@ class TerrainIntelligenceTests {
             site.setLongitude(85.2000);
             site.setSlopeDegrees(5.0);
 
-            terrainEvaluator.evaluateTerrain(site);
+            candidateSafeSiteService.evaluateTerrain(site);
 
             assertEquals(TerrainStatus.FAVORABLE, site.getTerrainStatus());
             assertTrue(site.getTerrainReason().contains("favorable"));
@@ -196,7 +189,7 @@ class TerrainIntelligenceTests {
             site.setLongitude(85.2000);
             site.setSlopeDegrees(5.01);
 
-            terrainEvaluator.evaluateTerrain(site);
+            candidateSafeSiteService.evaluateTerrain(site);
 
             assertEquals(TerrainStatus.UNKNOWN, site.getTerrainStatus());
             assertTrue(site.getTerrainReason().contains("intermediate"));
@@ -212,7 +205,7 @@ class TerrainIntelligenceTests {
             site.setLongitude(85.2000);
             site.setSlopeDegrees(10.0);
 
-            terrainEvaluator.evaluateTerrain(site);
+            candidateSafeSiteService.evaluateTerrain(site);
 
             assertEquals(TerrainStatus.UNKNOWN, site.getTerrainStatus());
             assertTrue(site.getTerrainReason().contains("intermediate"));
@@ -228,7 +221,7 @@ class TerrainIntelligenceTests {
             site.setLongitude(85.2000);
             site.setSlopeDegrees(14.99);
 
-            terrainEvaluator.evaluateTerrain(site);
+            candidateSafeSiteService.evaluateTerrain(site);
 
             assertEquals(TerrainStatus.UNKNOWN, site.getTerrainStatus());
             assertTrue(site.getTerrainReason().contains("intermediate"));
@@ -244,7 +237,7 @@ class TerrainIntelligenceTests {
             site.setLongitude(85.2000);
             site.setSlopeDegrees(15.0);
 
-            terrainEvaluator.evaluateTerrain(site);
+            candidateSafeSiteService.evaluateTerrain(site);
 
             assertEquals(TerrainStatus.UNFAVORABLE, site.getTerrainStatus());
             assertTrue(site.getTerrainReason().contains("unfavorable"));
@@ -261,7 +254,7 @@ class TerrainIntelligenceTests {
             site.setElevationMeters(null);
             site.setSlopeDegrees(3.0);
 
-            terrainEvaluator.evaluateTerrain(site);
+            candidateSafeSiteService.evaluateTerrain(site);
 
             assertEquals(TerrainStatus.FAVORABLE, site.getTerrainStatus());
             assertNull(site.getElevationMeters());
@@ -278,7 +271,7 @@ class TerrainIntelligenceTests {
             site.setElevationMeters(52.0);
             site.setSlopeDegrees(null);
 
-            terrainEvaluator.evaluateTerrain(site);
+            candidateSafeSiteService.evaluateTerrain(site);
 
             assertEquals(TerrainStatus.UNKNOWN, site.getTerrainStatus());
             assertEquals(52.0, site.getElevationMeters());
@@ -294,7 +287,7 @@ class TerrainIntelligenceTests {
             site.setLatitude(null);
             site.setLongitude(null);
 
-            terrainEvaluator.evaluateTerrain(site);
+            candidateSafeSiteService.evaluateTerrain(site);
 
             assertEquals(TerrainStatus.UNKNOWN, site.getTerrainStatus());
             assertTrue(site.getTerrainReason().contains("Missing or invalid geographic coordinates"));
@@ -311,7 +304,7 @@ class TerrainIntelligenceTests {
             when(terrainService.getDemTileForCoordinate(85.5030, 26.5950))
                     .thenReturn(Optional.of(createMockDemTile("copernicus_dsm_cog_10_n26_00_e085_00_dem_clean", 38.88, 361.85)));
 
-            terrainEvaluator.evaluateTerrain(site);
+            candidateSafeSiteService.evaluateTerrain(site);
 
             assertEquals(TerrainStatus.UNKNOWN, site.getTerrainStatus());
             assertNull(site.getElevationMeters());
@@ -332,7 +325,7 @@ class TerrainIntelligenceTests {
             when(terrainService.getDemTileForCoordinate(83.0000, 24.0000))
                     .thenReturn(Optional.empty());
 
-            terrainEvaluator.evaluateTerrain(site);
+            candidateSafeSiteService.evaluateTerrain(site);
 
             assertEquals(TerrainStatus.UNKNOWN, site.getTerrainStatus());
             assertNull(site.getElevationMeters());
@@ -350,7 +343,7 @@ class TerrainIntelligenceTests {
             site.setHazardSafetyStatus(HazardSafetyStatus.SAFE);
             site.setSlopeDegrees(22.0); // Steep terrain
 
-            terrainEvaluator.evaluateTerrain(site);
+            candidateSafeSiteService.evaluateTerrain(site);
 
             // Hazard safety remains SAFE while Terrain is UNFAVORABLE
             assertEquals(HazardSafetyStatus.SAFE, site.getHazardSafetyStatus());

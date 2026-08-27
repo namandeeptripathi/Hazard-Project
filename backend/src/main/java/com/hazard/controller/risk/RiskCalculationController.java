@@ -6,7 +6,6 @@ import com.hazard.dto.common.ApiResponse;
 import com.hazard.dto.hazard.GeoJsonFeatureCollectionDto;
 import com.hazard.dto.risk.DistrictRiskScoreDto;
 import com.hazard.dto.risk.RedZoneDto;
-import com.hazard.dto.risk.RiskConfigDto;
 import com.hazard.dto.risk.RiskContributorsSummaryDto;
 import com.hazard.dto.risk.config.RiskScenarioAnalysisRequestDto;
 import com.hazard.dto.risk.config.RiskScenarioAnalysisResultDto;

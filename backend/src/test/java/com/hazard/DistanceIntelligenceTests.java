@@ -15,7 +15,10 @@ import com.hazard.repository.boundaries.DistrictDistanceProjection;
 import com.hazard.service.exposure.InfrastructureDataProvider;
 import com.hazard.service.exposure.SettlementExposureService;
 import com.hazard.service.risk.RedZoneService;
-import com.hazard.service.safesite.*;
+import com.hazard.service.risk.RiskCalculationService;
+import com.hazard.service.safesite.CandidateSafeSiteService;
+import com.hazard.service.safesite.SafeSiteThresholds;
+import com.hazard.service.terrain.TerrainService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -49,37 +52,27 @@ class DistanceIntelligenceTests {
     private InfrastructureDataProvider dataProvider;
 
     @Mock
-    private HazardSafetyEvaluator hazardSafetyEvaluator;
+    private TerrainService terrainService;
 
     @Mock
-    private TerrainEvaluator terrainEvaluator;
+    private RiskCalculationService riskCalculationService;
 
-    @Mock
-    private com.hazard.service.safesite.RoadAccessibilityEvaluator roadAccessibilityEvaluator;
-
-    @Mock
-    private com.hazard.service.safesite.HealthcareEvaluator healthcareEvaluator;
-
-    @Mock
-    private com.hazard.service.safesite.WaterEvaluator waterEvaluator;
-
-    @Mock
-    private com.hazard.service.safesite.InfrastructureEvaluator infrastructureEvaluator;
-
-    @Mock
-    private com.hazard.service.safesite.SuitabilityEvaluator suitabilityEvaluator;
-
-    private DistanceEvaluationConfig config;
-    private DistanceEvaluator distanceEvaluator;
-    private SafeSiteRankingEvaluator safeSiteRankingEvaluator = new SafeSiteRankingEvaluator();
+    private SafeSiteThresholds thresholds;
     private CandidateSafeSiteService candidateSafeSiteService;
 
     @BeforeEach
     void setUp() {
-        config = new DistanceEvaluationConfig(5.0, 20.0);
-        distanceEvaluator = new DistanceEvaluator(districtBoundaryRepository, redZoneService, config);
+        thresholds = new SafeSiteThresholds();
+        thresholds.setNearDistanceKm(5.0);
+        thresholds.setFarDistanceKm(20.0);
         candidateSafeSiteService = new CandidateSafeSiteService(
-                dataProvider, redZoneService, hazardSafetyEvaluator, terrainEvaluator, distanceEvaluator, roadAccessibilityEvaluator, healthcareEvaluator, waterEvaluator, infrastructureEvaluator, suitabilityEvaluator, safeSiteRankingEvaluator);
+                dataProvider,
+                redZoneService,
+                districtBoundaryRepository,
+                terrainService,
+                riskCalculationService,
+                thresholds
+        );
     }
 
     private DistrictDistanceProjection createMockProjection(String districtName, double distanceMeters) {
@@ -172,10 +165,7 @@ class DistanceIntelligenceTests {
 
             // Great-circle distance between Patna & Sitamarhi center is approx ~113 km
             assertTrue(distanceKm > 105.0 && distanceKm < 120.0, "Expected ~113 km, got " + distanceKm);
-
-            // Verify DistanceEvaluator delegates to same calculation
-            double evalMeters = distanceEvaluator.calculateHaversineDistanceMeters(25.6210, 85.1720, 26.5950, 85.5030);
-            assertEquals(distanceMeters, evalMeters, 0.01);
+            assertTrue(distanceMeters > 105000.0 && distanceMeters < 120000.0);
         }
 
         @Test
@@ -190,7 +180,7 @@ class DistanceIntelligenceTests {
             when(districtBoundaryRepository.findNearestDistrictDistance(eq(85.5030), eq(26.5950), anyList()))
                     .thenReturn(Optional.of(createMockProjection("Sitamarhi", 0.0)));
 
-            distanceEvaluator.evaluateDistance(site);
+            candidateSafeSiteService.evaluateDistance(site);
 
             assertEquals(DistanceStatus.NEAR, site.getDistanceStatus());
             assertEquals(0.0, site.getDistanceMeters());
@@ -220,7 +210,7 @@ class DistanceIntelligenceTests {
             when(districtBoundaryRepository.findNearestDistrictDistance(anyDouble(), anyDouble(), anyList()))
                     .thenReturn(Optional.of(createMockProjection("Sitamarhi", 3200.0)));
 
-            distanceEvaluator.evaluateDistance(site);
+            candidateSafeSiteService.evaluateDistance(site);
 
             assertEquals(DistanceStatus.NEAR, site.getDistanceStatus());
             assertEquals(3200.0, site.getDistanceMeters());
@@ -241,7 +231,7 @@ class DistanceIntelligenceTests {
             when(districtBoundaryRepository.findNearestDistrictDistance(anyDouble(), anyDouble(), anyList()))
                     .thenReturn(Optional.of(createMockProjection("Sitamarhi", 5000.0)));
 
-            distanceEvaluator.evaluateDistance(site);
+            candidateSafeSiteService.evaluateDistance(site);
 
             assertEquals(DistanceStatus.NEAR, site.getDistanceStatus());
             assertEquals(5000.0, site.getDistanceMeters());
@@ -260,7 +250,7 @@ class DistanceIntelligenceTests {
             when(districtBoundaryRepository.findNearestDistrictDistance(anyDouble(), anyDouble(), anyList()))
                     .thenReturn(Optional.of(createMockProjection("Sitamarhi", 5010.0)));
 
-            distanceEvaluator.evaluateDistance(site);
+            candidateSafeSiteService.evaluateDistance(site);
 
             assertEquals(DistanceStatus.MODERATE, site.getDistanceStatus());
             assertEquals(5.01, site.getDistanceKilometers());
@@ -279,7 +269,7 @@ class DistanceIntelligenceTests {
             when(districtBoundaryRepository.findNearestDistrictDistance(anyDouble(), anyDouble(), anyList()))
                     .thenReturn(Optional.of(createMockProjection("Sitamarhi", 12500.0)));
 
-            distanceEvaluator.evaluateDistance(site);
+            candidateSafeSiteService.evaluateDistance(site);
 
             assertEquals(DistanceStatus.MODERATE, site.getDistanceStatus());
             assertEquals(12500.0, site.getDistanceMeters());
@@ -298,7 +288,7 @@ class DistanceIntelligenceTests {
             when(districtBoundaryRepository.findNearestDistrictDistance(anyDouble(), anyDouble(), anyList()))
                     .thenReturn(Optional.of(createMockProjection("Sitamarhi", 19990.0)));
 
-            distanceEvaluator.evaluateDistance(site);
+            candidateSafeSiteService.evaluateDistance(site);
 
             assertEquals(DistanceStatus.MODERATE, site.getDistanceStatus());
             assertEquals(19.99, site.getDistanceKilometers());
@@ -316,7 +306,7 @@ class DistanceIntelligenceTests {
             when(districtBoundaryRepository.findNearestDistrictDistance(anyDouble(), anyDouble(), anyList()))
                     .thenReturn(Optional.of(createMockProjection("Sitamarhi", 20000.0)));
 
-            distanceEvaluator.evaluateDistance(site);
+            candidateSafeSiteService.evaluateDistance(site);
 
             assertEquals(DistanceStatus.FAR, site.getDistanceStatus());
             assertEquals(20000.0, site.getDistanceMeters());
@@ -335,7 +325,7 @@ class DistanceIntelligenceTests {
             when(districtBoundaryRepository.findNearestDistrictDistance(anyDouble(), anyDouble(), anyList()))
                     .thenReturn(Optional.of(createMockProjection("Sitamarhi", 75785.1)));
 
-            distanceEvaluator.evaluateDistance(site);
+            candidateSafeSiteService.evaluateDistance(site);
 
             assertEquals(DistanceStatus.FAR, site.getDistanceStatus());
             assertEquals(75785.1, site.getDistanceMeters());
@@ -352,7 +342,7 @@ class DistanceIntelligenceTests {
             site.setLatitude(null);
             site.setLongitude(null);
 
-            distanceEvaluator.evaluateDistance(site);
+            candidateSafeSiteService.evaluateDistance(site);
 
             assertEquals(DistanceStatus.UNKNOWN, site.getDistanceStatus());
             assertNull(site.getDistanceMeters());
@@ -369,9 +359,8 @@ class DistanceIntelligenceTests {
             site.setLongitude(85.1720);
 
             when(redZoneService.getRedZonesOnly()).thenReturn(Collections.emptyList());
-            when(redZoneService.getZonesByMinimumLevel(ZoneLevel.HIGH)).thenReturn(Collections.emptyList());
 
-            distanceEvaluator.evaluateDistance(site);
+            candidateSafeSiteService.evaluateDistance(site);
 
             assertEquals(DistanceStatus.UNKNOWN, site.getDistanceStatus());
             assertNull(site.getDistanceMeters());
@@ -393,7 +382,7 @@ class DistanceIntelligenceTests {
             when(districtBoundaryRepository.findNearestDistrictDistance(anyDouble(), anyDouble(), anyList()))
                     .thenReturn(Optional.of(createMockProjection("Sitamarhi", 75785.1)));
 
-            distanceEvaluator.evaluateDistance(site);
+            candidateSafeSiteService.evaluateDistance(site);
 
             // Distance is FAR while Hazard Safety is SAFE and Terrain is FAVORABLE
             assertEquals(HazardSafetyStatus.SAFE, site.getHazardSafetyStatus());

@@ -9,9 +9,13 @@ import com.hazard.dto.hazard.GeoJsonFeatureCollectionDto;
 import com.hazard.dto.infrastructure.InfrastructureAssetDto;
 import com.hazard.dto.safesite.CandidateSafeSiteDto;
 import com.hazard.exception.InvalidHazardParameterException;
+import com.hazard.repository.boundaries.DistrictBoundaryRepository;
 import com.hazard.service.exposure.InfrastructureDataProvider;
 import com.hazard.service.risk.RedZoneService;
-import com.hazard.service.safesite.*;
+import com.hazard.service.risk.RiskCalculationService;
+import com.hazard.service.safesite.CandidateSafeSiteService;
+import com.hazard.service.safesite.SafeSiteThresholds;
+import com.hazard.service.terrain.TerrainService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -20,12 +24,9 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
 /**
@@ -41,47 +42,27 @@ class RoadsIntelligenceTests {
     private RedZoneService redZoneService;
 
     @Mock
-    private HazardSafetyEvaluator hazardSafetyEvaluator;
+    private DistrictBoundaryRepository districtBoundaryRepository;
 
     @Mock
-    private TerrainEvaluator terrainEvaluator;
+    private TerrainService terrainService;
 
     @Mock
-    private DistanceEvaluator distanceEvaluator;
+    private RiskCalculationService riskCalculationService;
 
-    @Mock
-    private HealthcareEvaluator healthcareEvaluator;
-
-    @Mock
-    private WaterEvaluator waterEvaluator;
-
-    @Mock
-    private InfrastructureEvaluator infrastructureEvaluator;
-
-    @Mock
-    private SuitabilityEvaluator suitabilityEvaluator;
-
-    private RoadAccessEvaluationConfig roadConfig;
-    private RoadAccessibilityEvaluator roadAccessibilityEvaluator;
-    private SafeSiteRankingEvaluator safeSiteRankingEvaluator = new SafeSiteRankingEvaluator();
+    private SafeSiteThresholds thresholds;
     private CandidateSafeSiteService candidateSafeSiteService;
 
     @BeforeEach
     void setUp() {
-        roadConfig = new RoadAccessEvaluationConfig();
-        roadAccessibilityEvaluator = new RoadAccessibilityEvaluator(roadConfig);
+        thresholds = new SafeSiteThresholds();
         candidateSafeSiteService = new CandidateSafeSiteService(
                 dataProvider,
                 redZoneService,
-                hazardSafetyEvaluator,
-                terrainEvaluator,
-                distanceEvaluator,
-                roadAccessibilityEvaluator,
-                healthcareEvaluator,
-                waterEvaluator,
-                infrastructureEvaluator,
-                suitabilityEvaluator,
-                safeSiteRankingEvaluator
+                districtBoundaryRepository,
+                terrainService,
+                riskCalculationService,
+                thresholds
         );
     }
 
@@ -141,7 +122,7 @@ class RoadsIntelligenceTests {
         @DisplayName("Test 4: Candidate directly on road (0.0 m) -> NEAR")
         void testZeroDistanceNear() {
             CandidateSafeSiteDto site = createCandidateSite(85.158, 25.6208);
-            roadAccessibilityEvaluator.evaluateRoadAccessibility(site, 0.0);
+            candidateSafeSiteService.evaluateRoadAccessibility(site, 0.0);
 
             assertEquals(RoadAccessStatus.NEAR, site.getRoadAccessStatus());
             assertEquals(0.0, site.getRoadDistanceMeters());
@@ -153,7 +134,7 @@ class RoadsIntelligenceTests {
         @DisplayName("Test 5: Candidate close to road (250.0 m <= 500m threshold) -> NEAR")
         void testWithinNearThreshold() {
             CandidateSafeSiteDto site = createCandidateSite(85.158, 25.6208);
-            roadAccessibilityEvaluator.evaluateRoadAccessibility(site, 250.0);
+            candidateSafeSiteService.evaluateRoadAccessibility(site, 250.0);
 
             assertEquals(RoadAccessStatus.NEAR, site.getRoadAccessStatus());
             assertEquals(250.0, site.getRoadDistanceMeters());
@@ -165,7 +146,7 @@ class RoadsIntelligenceTests {
         @DisplayName("Test 6: Candidate exactly at near threshold (500.0 m) -> NEAR")
         void testExactNearThreshold() {
             CandidateSafeSiteDto site = createCandidateSite(85.158, 25.6208);
-            roadAccessibilityEvaluator.evaluateRoadAccessibility(site, 500.0);
+            candidateSafeSiteService.evaluateRoadAccessibility(site, 500.0);
 
             assertEquals(RoadAccessStatus.NEAR, site.getRoadAccessStatus());
             assertEquals(500.0, site.getRoadDistanceMeters());
@@ -176,7 +157,7 @@ class RoadsIntelligenceTests {
         @DisplayName("Test 7: Candidate just above near threshold (500.1 m) -> MODERATE")
         void testModerateLowEdge() {
             CandidateSafeSiteDto site = createCandidateSite(85.158, 25.6208);
-            roadAccessibilityEvaluator.evaluateRoadAccessibility(site, 500.1);
+            candidateSafeSiteService.evaluateRoadAccessibility(site, 500.1);
 
             assertEquals(RoadAccessStatus.MODERATE, site.getRoadAccessStatus());
             assertEquals(500.1, site.getRoadDistanceMeters());
@@ -188,7 +169,7 @@ class RoadsIntelligenceTests {
         @DisplayName("Test 8: Candidate at intermediate distance (1200.0 m) -> MODERATE")
         void testModerateMiddle() {
             CandidateSafeSiteDto site = createCandidateSite(85.158, 25.6208);
-            roadAccessibilityEvaluator.evaluateRoadAccessibility(site, 1200.0);
+            candidateSafeSiteService.evaluateRoadAccessibility(site, 1200.0);
 
             assertEquals(RoadAccessStatus.MODERATE, site.getRoadAccessStatus());
             assertEquals(1200.0, site.getRoadDistanceMeters());
@@ -199,7 +180,7 @@ class RoadsIntelligenceTests {
         @DisplayName("Test 9: Candidate just below far threshold (1999.9 m) -> MODERATE")
         void testModerateHighEdge() {
             CandidateSafeSiteDto site = createCandidateSite(85.158, 25.6208);
-            roadAccessibilityEvaluator.evaluateRoadAccessibility(site, 1999.9);
+            candidateSafeSiteService.evaluateRoadAccessibility(site, 1999.9);
 
             assertEquals(RoadAccessStatus.MODERATE, site.getRoadAccessStatus());
             assertEquals(1999.9, site.getRoadDistanceMeters());
@@ -210,7 +191,7 @@ class RoadsIntelligenceTests {
         @DisplayName("Test 10: Candidate exactly at far threshold (2000.0 m) -> FAR")
         void testExactFarThreshold() {
             CandidateSafeSiteDto site = createCandidateSite(85.158, 25.6208);
-            roadAccessibilityEvaluator.evaluateRoadAccessibility(site, 2000.0);
+            candidateSafeSiteService.evaluateRoadAccessibility(site, 2000.0);
 
             assertEquals(RoadAccessStatus.FAR, site.getRoadAccessStatus());
             assertEquals(2000.0, site.getRoadDistanceMeters());
@@ -222,7 +203,7 @@ class RoadsIntelligenceTests {
         @DisplayName("Test 11: Candidate far from road network (5000.0 m) -> FAR")
         void testFarDistance() {
             CandidateSafeSiteDto site = createCandidateSite(85.158, 25.6208);
-            roadAccessibilityEvaluator.evaluateRoadAccessibility(site, 5000.0);
+            candidateSafeSiteService.evaluateRoadAccessibility(site, 5000.0);
 
             assertEquals(RoadAccessStatus.FAR, site.getRoadAccessStatus());
             assertEquals(5000.0, site.getRoadDistanceMeters());
@@ -233,8 +214,7 @@ class RoadsIntelligenceTests {
         @DisplayName("Test 12: Missing road network dataset in platform state -> UNKNOWN with descriptive reason")
         void testMissingRoadDataEvaluatesToUnknown() {
             CandidateSafeSiteDto site = createCandidateSite(85.158, 25.6208);
-            // Default evaluateRoadAccessibility without explicit distance (production state)
-            roadAccessibilityEvaluator.evaluateRoadAccessibility(site);
+            candidateSafeSiteService.evaluateRoadAccessibility(site);
 
             assertEquals(RoadAccessStatus.UNKNOWN, site.getRoadAccessStatus());
             assertNull(site.getRoadDistanceMeters());
@@ -250,7 +230,7 @@ class RoadsIntelligenceTests {
             site.setLatitude(null);
             site.setLongitude(null);
 
-            roadAccessibilityEvaluator.evaluateRoadAccessibility(site);
+            candidateSafeSiteService.evaluateRoadAccessibility(site);
 
             assertEquals(RoadAccessStatus.UNKNOWN, site.getRoadAccessStatus());
             assertNull(site.getRoadDistanceMeters());
@@ -263,7 +243,7 @@ class RoadsIntelligenceTests {
         void testOutOfBoundsCoordinatesEvaluatesToUnknown() {
             CandidateSafeSiteDto site = createCandidateSite(200.0, 95.0);
 
-            roadAccessibilityEvaluator.evaluateRoadAccessibility(site);
+            candidateSafeSiteService.evaluateRoadAccessibility(site);
 
             assertEquals(RoadAccessStatus.UNKNOWN, site.getRoadAccessStatus());
             assertNull(site.getRoadDistanceMeters());
@@ -279,7 +259,7 @@ class RoadsIntelligenceTests {
             site.setDistanceStatus(DistanceStatus.FAR);
 
             // Evaluate road access as NEAR
-            roadAccessibilityEvaluator.evaluateRoadAccessibility(site, 150.0);
+            candidateSafeSiteService.evaluateRoadAccessibility(site, 150.0);
 
             assertEquals(HazardSafetyStatus.SAFE, site.getHazardSafetyStatus());
             assertEquals(TerrainStatus.FAVORABLE, site.getTerrainStatus());
@@ -287,7 +267,7 @@ class RoadsIntelligenceTests {
             assertEquals(RoadAccessStatus.NEAR, site.getRoadAccessStatus());
 
             // Re-evaluate road access as FAR
-            roadAccessibilityEvaluator.evaluateRoadAccessibility(site, 3500.0);
+            candidateSafeSiteService.evaluateRoadAccessibility(site, 3500.0);
 
             // Other dimensions must remain unaffected
             assertEquals(HazardSafetyStatus.SAFE, site.getHazardSafetyStatus());
@@ -308,7 +288,6 @@ class RoadsIntelligenceTests {
             InfrastructureAssetDto asset2 = createAsset("FAC-2", "Shelter 1", InfrastructureCategory.EMERGENCY_SERVICES, "Sitamarhi", 85.50, 26.59);
 
             when(dataProvider.getAllRegionalFacilities()).thenReturn(List.of(asset1, asset2));
-            when(distanceEvaluator.resolveActiveHighRiskDistricts()).thenReturn(List.of("Patna"));
 
             List<CandidateSafeSiteDto> results = candidateSafeSiteService.getCandidateSites(
                     null, null, false, null, null, null, "UNKNOWN");
@@ -323,7 +302,6 @@ class RoadsIntelligenceTests {
         void testFilterRoadAccessNear() {
             InfrastructureAssetDto asset1 = createAsset("FAC-1", "Hospital 1", InfrastructureCategory.HEALTHCARE, "Patna", 85.15, 25.62);
             when(dataProvider.getAllRegionalFacilities()).thenReturn(List.of(asset1));
-            when(distanceEvaluator.resolveActiveHighRiskDistricts()).thenReturn(List.of("Patna"));
 
             List<CandidateSafeSiteDto> results = candidateSafeSiteService.getCandidateSites(
                     null, null, false, null, null, null, "NEAR");
@@ -350,7 +328,6 @@ class RoadsIntelligenceTests {
         void testGeoJsonRoadPropertiesEnrichment() {
             InfrastructureAssetDto asset1 = createAsset("FAC-1", "Shelter 1", InfrastructureCategory.EMERGENCY_SERVICES, "Patna", 85.15, 25.62);
             when(dataProvider.getAllRegionalFacilities()).thenReturn(List.of(asset1));
-            when(distanceEvaluator.resolveActiveHighRiskDistricts()).thenReturn(List.of("Patna"));
 
             GeoJsonFeatureCollectionDto geojson = candidateSafeSiteService.generateCandidateSitesGeoJson(
                     null, null, false, null, null, null, null);
@@ -367,7 +344,6 @@ class RoadsIntelligenceTests {
         }
     }
 
-    // Helper methods
     private CandidateSafeSiteDto createCandidateSite(Double lon, Double lat) {
         CandidateSafeSiteDto site = new CandidateSafeSiteDto();
         site.setSiteId("FAC-TEST-001");

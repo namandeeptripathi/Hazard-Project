@@ -11,10 +11,14 @@ import com.hazard.dto.hazard.GeoJsonFeatureCollectionDto;
 import com.hazard.dto.infrastructure.InfrastructureAssetDto;
 import com.hazard.dto.safesite.CandidateSafeSiteDto;
 import com.hazard.exception.InvalidHazardParameterException;
+import com.hazard.repository.boundaries.DistrictBoundaryRepository;
 import com.hazard.service.exposure.InfrastructureDataProvider;
 import com.hazard.service.exposure.SettlementExposureService;
 import com.hazard.service.risk.RedZoneService;
-import com.hazard.service.safesite.*;
+import com.hazard.service.risk.RiskCalculationService;
+import com.hazard.service.safesite.CandidateSafeSiteService;
+import com.hazard.service.safesite.SafeSiteThresholds;
+import com.hazard.service.terrain.TerrainService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -23,7 +27,6 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
@@ -43,47 +46,29 @@ class HealthcareIntelligenceTests {
     private RedZoneService redZoneService;
 
     @Mock
-    private HazardSafetyEvaluator hazardSafetyEvaluator;
+    private DistrictBoundaryRepository districtBoundaryRepository;
 
     @Mock
-    private TerrainEvaluator terrainEvaluator;
+    private TerrainService terrainService;
 
     @Mock
-    private DistanceEvaluator distanceEvaluator;
+    private RiskCalculationService riskCalculationService;
 
-    @Mock
-    private RoadAccessibilityEvaluator roadAccessibilityEvaluator;
-
-    @Mock
-    private WaterEvaluator waterEvaluator;
-
-    @Mock
-    private InfrastructureEvaluator infrastructureEvaluator;
-
-    @Mock
-    private SuitabilityEvaluator suitabilityEvaluator;
-
-    private HealthcareEvaluationConfig healthcareConfig;
-    private HealthcareEvaluator healthcareEvaluator;
-    private SafeSiteRankingEvaluator safeSiteRankingEvaluator = new SafeSiteRankingEvaluator();
+    private SafeSiteThresholds thresholds;
     private CandidateSafeSiteService candidateSafeSiteService;
 
     @BeforeEach
     void setUp() {
-        healthcareConfig = new HealthcareEvaluationConfig(5000.0, 20000.0);
-        healthcareEvaluator = new HealthcareEvaluator(dataProvider, healthcareConfig);
+        thresholds = new SafeSiteThresholds();
+        thresholds.setNearHealthcareDistanceMeters(5000.0);
+        thresholds.setFarHealthcareDistanceMeters(20000.0);
         candidateSafeSiteService = new CandidateSafeSiteService(
                 dataProvider,
                 redZoneService,
-                hazardSafetyEvaluator,
-                terrainEvaluator,
-                distanceEvaluator,
-                roadAccessibilityEvaluator,
-                healthcareEvaluator,
-                waterEvaluator,
-                infrastructureEvaluator,
-                suitabilityEvaluator,
-                safeSiteRankingEvaluator
+                districtBoundaryRepository,
+                terrainService,
+                riskCalculationService,
+                thresholds
         );
     }
 
@@ -146,44 +131,41 @@ class HealthcareIntelligenceTests {
             when(dataProvider.getHealthcareFacilities()).thenReturn(List.of(hospital));
 
             CandidateSafeSiteDto site = createCandidateSite("FAC-MED-001", "PMCH", 85.1580, 25.6208);
-            healthcareEvaluator.evaluateHealthcareAccess(site);
+            candidateSafeSiteService.evaluateHealthcareAccess(site);
 
             assertEquals(HealthcareAccessStatus.NEAR, site.getHealthcareAccessStatus());
             assertEquals(0.0, site.getHealthcareDistanceMeters());
             assertEquals(0.0, site.getHealthcareDistanceKilometers());
             assertEquals("FAC-MED-001", site.getNearestHealthcareSiteId());
             assertEquals("PMCH", site.getNearestHealthcareSiteName());
-            assertTrue(site.getHealthcareReason().contains("itself a healthcare facility"));
+            assertTrue(site.getHealthcareReason().contains("itself a configured healthcare facility"));
         }
 
         @Test
         @DisplayName("Test 5: Candidate close to healthcare facility (2.5 km <= 5.0 km) -> NEAR")
         void testCandidateCloseToHealthcare() {
-            // NIT Patna (85.1720, 25.6210) is ~1.4 km from PMCH (85.1580, 25.6208)
             InfrastructureAssetDto hospital = createHealthcareFacility("FAC-MED-001", "PMCH", 85.1580, 25.6208);
             when(dataProvider.getHealthcareFacilities()).thenReturn(List.of(hospital));
 
             CandidateSafeSiteDto site = createCandidateSite("FAC-EDU-001", "NIT Patna", 85.1720, 25.6210);
-            healthcareEvaluator.evaluateHealthcareAccess(site);
+            candidateSafeSiteService.evaluateHealthcareAccess(site);
 
             assertEquals(HealthcareAccessStatus.NEAR, site.getHealthcareAccessStatus());
             assertNotNull(site.getHealthcareDistanceMeters());
             assertTrue(site.getHealthcareDistanceMeters() <= 5000.0);
             assertEquals("FAC-MED-001", site.getNearestHealthcareSiteId());
             assertEquals("PMCH", site.getNearestHealthcareSiteName());
-            assertTrue(site.getHealthcareReason().contains("close healthcare access"));
+            assertTrue(site.getHealthcareReason().contains("close healthcare proximity"));
         }
 
         @Test
         @DisplayName("Test 6: Candidate at intermediate distance (12.0 km, between 5.0km and 20.0km) -> MODERATE")
         void testModerateHealthcareDistance() {
-            // Place candidate roughly 12km from hospital
             InfrastructureAssetDto hospital = createHealthcareFacility("FAC-MED-001", "PMCH", 85.1580, 25.6208);
             when(dataProvider.getHealthcareFacilities()).thenReturn(List.of(hospital));
 
-            // Candidate ~12km away (0.11 degrees lat ~ 12.2km)
             CandidateSafeSiteDto site = createCandidateSite("FAC-TEST-001", "Intermediate Facility", 85.1580, 25.7308);
-            healthcareEvaluator.evaluateHealthcareAccess(site);
+            candidateSafeSiteService.evaluateHealthcareAccess(site);
 
             assertEquals(HealthcareAccessStatus.MODERATE, site.getHealthcareAccessStatus());
             assertTrue(site.getHealthcareDistanceMeters() > 5000.0 && site.getHealthcareDistanceMeters() < 20000.0);
@@ -194,12 +176,11 @@ class HealthcareIntelligenceTests {
         @Test
         @DisplayName("Test 7: Candidate far from healthcare facility (>= 20.0 km) -> FAR")
         void testFarHealthcareDistance() {
-            // Sitamarhi shelter with only PMCH in Patna (over 100km away)
             InfrastructureAssetDto hospital = createHealthcareFacility("FAC-MED-001", "PMCH", 85.1580, 25.6208);
             when(dataProvider.getHealthcareFacilities()).thenReturn(List.of(hospital));
 
             CandidateSafeSiteDto site = createCandidateSite("FAC-EMG-003", "Sitamarhi Shelter", 85.5030, 26.5950);
-            healthcareEvaluator.evaluateHealthcareAccess(site);
+            candidateSafeSiteService.evaluateHealthcareAccess(site);
 
             assertEquals(HealthcareAccessStatus.FAR, site.getHealthcareAccessStatus());
             assertTrue(site.getHealthcareDistanceMeters() >= 20000.0);
@@ -217,9 +198,8 @@ class HealthcareIntelligenceTests {
 
             when(dataProvider.getHealthcareFacilities()).thenReturn(List.of(patnaMed, sitamarhiMed, gayaMed));
 
-            // Candidate in Sitamarhi (85.5030, 26.5950) — only ~600m from Sitamarhi Hospital
             CandidateSafeSiteDto site = createCandidateSite("FAC-EMG-003", "Sitamarhi Flood Shelter", 85.5030, 26.5950);
-            healthcareEvaluator.evaluateHealthcareAccess(site);
+            candidateSafeSiteService.evaluateHealthcareAccess(site);
 
             assertEquals("FAC-MED-007", site.getNearestHealthcareSiteId());
             assertEquals("Sitamarhi Hospital", site.getNearestHealthcareSiteName());
@@ -236,7 +216,7 @@ class HealthcareIntelligenceTests {
             double siteLon = 85.3850;
             double siteLat = 26.1210;
             CandidateSafeSiteDto site = createCandidateSite("FAC-EMG-004", "Muzaffarpur Control Center", siteLon, siteLat);
-            healthcareEvaluator.evaluateHealthcareAccess(site);
+            candidateSafeSiteService.evaluateHealthcareAccess(site);
 
             double expectedMeters = SettlementExposureService.haversineDistanceMeters(siteLat, siteLon, 26.1520, 85.3910);
             double expectedRounded = Math.round(expectedMeters * 10.0) / 10.0;
@@ -250,14 +230,14 @@ class HealthcareIntelligenceTests {
             when(dataProvider.getHealthcareFacilities()).thenReturn(Collections.emptyList());
 
             CandidateSafeSiteDto site = createCandidateSite("FAC-TEST-001", "Test Site", 85.158, 25.6208);
-            healthcareEvaluator.evaluateHealthcareAccess(site);
+            candidateSafeSiteService.evaluateHealthcareAccess(site);
 
             assertEquals(HealthcareAccessStatus.UNKNOWN, site.getHealthcareAccessStatus());
             assertNull(site.getHealthcareDistanceMeters());
             assertNull(site.getHealthcareDistanceKilometers());
             assertNull(site.getNearestHealthcareSiteId());
             assertNull(site.getNearestHealthcareSiteName());
-            assertTrue(site.getHealthcareReason().contains("No healthcare facilities available"));
+            assertTrue(site.getHealthcareReason().contains("No healthcare facilities found"));
         }
 
         @Test
@@ -268,7 +248,7 @@ class HealthcareIntelligenceTests {
             site.setLatitude(null);
             site.setLongitude(null);
 
-            healthcareEvaluator.evaluateHealthcareAccess(site);
+            candidateSafeSiteService.evaluateHealthcareAccess(site);
 
             assertEquals(HealthcareAccessStatus.UNKNOWN, site.getHealthcareAccessStatus());
             assertNull(site.getHealthcareDistanceMeters());
@@ -280,7 +260,7 @@ class HealthcareIntelligenceTests {
         void testOutOfBoundsCoordinatesEvaluatesToUnknown() {
             CandidateSafeSiteDto site = createCandidateSite("FAC-INVALID", "Invalid Coordinates", 200.0, 95.0);
 
-            healthcareEvaluator.evaluateHealthcareAccess(site);
+            candidateSafeSiteService.evaluateHealthcareAccess(site);
 
             assertEquals(HealthcareAccessStatus.UNKNOWN, site.getHealthcareAccessStatus());
             assertNull(site.getHealthcareDistanceMeters());
@@ -299,9 +279,8 @@ class HealthcareIntelligenceTests {
             site.setDistanceStatus(DistanceStatus.FAR);
             site.setRoadAccessStatus(RoadAccessStatus.UNKNOWN);
 
-            healthcareEvaluator.evaluateHealthcareAccess(site);
+            candidateSafeSiteService.evaluateHealthcareAccess(site);
 
-            // All other dimensions must be completely unaffected
             assertEquals(HazardSafetyStatus.SAFE, site.getHazardSafetyStatus());
             assertEquals(TerrainStatus.FAVORABLE, site.getTerrainStatus());
             assertEquals(DistanceStatus.FAR, site.getDistanceStatus());
@@ -321,8 +300,6 @@ class HealthcareIntelligenceTests {
             InfrastructureAssetDto edu = createAsset("FAC-EDU-001", "NIT Patna", InfrastructureCategory.EDUCATION, "Patna", 85.172, 25.621);
 
             when(dataProvider.getAllRegionalFacilities()).thenReturn(List.of(med, edu));
-            when(dataProvider.getHealthcareFacilities()).thenReturn(List.of(med));
-            when(distanceEvaluator.resolveActiveHighRiskDistricts()).thenReturn(List.of("Patna"));
 
             List<CandidateSafeSiteDto> results = candidateSafeSiteService.getCandidateSites(
                     null, null, false, null, null, null, null, "NEAR");
@@ -351,8 +328,6 @@ class HealthcareIntelligenceTests {
         void testGeoJsonHealthcarePropertiesEnrichment() {
             InfrastructureAssetDto med = createHealthcareFacility("FAC-MED-001", "PMCH", 85.158, 25.6208);
             when(dataProvider.getAllRegionalFacilities()).thenReturn(List.of(med));
-            when(dataProvider.getHealthcareFacilities()).thenReturn(List.of(med));
-            when(distanceEvaluator.resolveActiveHighRiskDistricts()).thenReturn(List.of("Patna"));
 
             GeoJsonFeatureCollectionDto geojson = candidateSafeSiteService.generateCandidateSitesGeoJson(
                     null, null, false, null, null, null, null, null);
@@ -375,7 +350,6 @@ class HealthcareIntelligenceTests {
         }
     }
 
-    // Helper methods
     private CandidateSafeSiteDto createCandidateSite(String id, String name, Double lon, Double lat) {
         CandidateSafeSiteDto site = new CandidateSafeSiteDto();
         site.setSiteId(id);

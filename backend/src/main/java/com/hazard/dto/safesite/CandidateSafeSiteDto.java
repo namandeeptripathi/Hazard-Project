@@ -43,6 +43,8 @@ public class CandidateSafeSiteDto {
     private Double latitude;
     private Double longitude;
     private Integer capacity; // Nullable; not fabricated if unavailable in source data
+    private Integer allocatedOccupancy; // Stage 6.1: Number of evacuees currently allocated to this site
+    private Integer availableCapacity;  // Stage 6.1: Remaining shelter capacity (capacity - allocatedOccupancy)
     private String source;
     private String status;
     private String colorHex;
@@ -231,6 +233,57 @@ public class CandidateSafeSiteDto {
 
     public void setCapacity(Integer capacity) {
         this.capacity = capacity;
+    }
+
+    public Integer getAllocatedOccupancy() {
+        return allocatedOccupancy;
+    }
+
+    public void setAllocatedOccupancy(Integer allocatedOccupancy) {
+        this.allocatedOccupancy = allocatedOccupancy;
+    }
+
+    public Integer getAvailableCapacity() {
+        if (availableCapacity != null) {
+            return availableCapacity;
+        }
+        if (capacity == null) {
+            return null;
+        }
+        int occ = (allocatedOccupancy != null) ? allocatedOccupancy : 0;
+        return Math.max(0, capacity - occ);
+    }
+
+    public void setAvailableCapacity(Integer availableCapacity) {
+        this.availableCapacity = availableCapacity;
+    }
+
+    public Double getOccupancyRate() {
+        if (capacity == null || capacity <= 0) {
+            return 0.0;
+        }
+        int occ = (allocatedOccupancy != null) ? allocatedOccupancy : 0;
+        return Math.min(1.0, (double) occ / capacity);
+    }
+
+    public Double getOccupancyPercentage() {
+        return getOccupancyRate() * 100.0;
+    }
+
+    public boolean isFull() {
+        if (capacity == null) {
+            return false;
+        }
+        Integer avail = getAvailableCapacity();
+        return avail != null && avail <= 0;
+    }
+
+    public boolean hasAvailableCapacity() {
+        if (capacity == null) {
+            return true;
+        }
+        Integer avail = getAvailableCapacity();
+        return avail != null && avail > 0;
     }
 
     public String getSource() {

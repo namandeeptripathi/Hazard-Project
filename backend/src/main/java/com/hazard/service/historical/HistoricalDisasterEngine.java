@@ -1,8 +1,6 @@
 package com.hazard.service.historical;
 
 import com.hazard.domain.hazard.HazardType;
-import com.hazard.domain.historical.HistoricalDataQualityStatus;
-import com.hazard.domain.historical.HistoricalHotspotTier;
 import com.hazard.dto.historical.*;
 import org.springframework.stereotype.Component;
 

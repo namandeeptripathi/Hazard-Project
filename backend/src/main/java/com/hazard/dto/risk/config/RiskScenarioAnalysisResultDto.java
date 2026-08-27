@@ -2,8 +2,6 @@ package com.hazard.dto.risk.config;
 
 import com.hazard.dto.risk.DistrictRiskScoreDto;
 
-import java.util.Map;
-
 /**
  * Result DTO for what-if scenario simulations, showing baseline vs. scenario comparison and delta difference.
  */

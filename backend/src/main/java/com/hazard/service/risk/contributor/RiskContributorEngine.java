@@ -1,7 +1,5 @@
 package com.hazard.service.risk.contributor;
 
-import com.hazard.domain.risk.contributor.ContributorDataAvailability;
-import com.hazard.domain.risk.contributor.ContributorDirection;
 import com.hazard.domain.risk.contributor.ContributorImportance;
 import com.hazard.dto.historical.DistrictHistoricalSummaryDto;
 import com.hazard.dto.risk.DistrictRiskScoreDto;

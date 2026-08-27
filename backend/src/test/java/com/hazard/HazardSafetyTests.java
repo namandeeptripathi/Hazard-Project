@@ -3,20 +3,19 @@ package com.hazard;
 import com.hazard.domain.boundaries.DistrictBoundary;
 import com.hazard.domain.infrastructure.InfrastructureCategory;
 import com.hazard.domain.risk.RiskTier;
-import com.hazard.domain.risk.ZoneLevel;
-import com.hazard.domain.safesite.CandidateSiteCategory;
 import com.hazard.domain.safesite.HazardSafetyStatus;
 import com.hazard.dto.hazard.GeoJsonFeatureCollectionDto;
 import com.hazard.dto.infrastructure.InfrastructureAssetDto;
 import com.hazard.dto.risk.DistrictRiskScoreDto;
-import com.hazard.dto.risk.RedZoneDto;
 import com.hazard.dto.safesite.CandidateSafeSiteDto;
 import com.hazard.exception.InvalidHazardParameterException;
 import com.hazard.repository.boundaries.DistrictBoundaryRepository;
 import com.hazard.service.exposure.InfrastructureDataProvider;
 import com.hazard.service.risk.RedZoneService;
 import com.hazard.service.risk.RiskCalculationService;
-import com.hazard.service.safesite.*;
+import com.hazard.service.safesite.CandidateSafeSiteService;
+import com.hazard.service.safesite.SafeSiteThresholds;
+import com.hazard.service.terrain.TerrainService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -30,7 +29,6 @@ import java.util.List;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
 /**
@@ -52,35 +50,22 @@ class HazardSafetyTests {
     private RedZoneService redZoneService;
 
     @Mock
-    private com.hazard.service.safesite.TerrainEvaluator terrainEvaluator;
+    private TerrainService terrainService;
 
-    @Mock
-    private com.hazard.service.safesite.DistanceEvaluator distanceEvaluator;
-
-    @Mock
-    private com.hazard.service.safesite.RoadAccessibilityEvaluator roadAccessibilityEvaluator;
-
-    @Mock
-    private com.hazard.service.safesite.HealthcareEvaluator healthcareEvaluator;
-
-    @Mock
-    private com.hazard.service.safesite.WaterEvaluator waterEvaluator;
-
-    @Mock
-    private com.hazard.service.safesite.InfrastructureEvaluator infrastructureEvaluator;
-
-    @Mock
-    private com.hazard.service.safesite.SuitabilityEvaluator suitabilityEvaluator;
-
-    private HazardSafetyEvaluator hazardSafetyEvaluator;
-    private SafeSiteRankingEvaluator safeSiteRankingEvaluator = new SafeSiteRankingEvaluator();
+    private SafeSiteThresholds thresholds;
     private CandidateSafeSiteService candidateSafeSiteService;
 
     @BeforeEach
     void setUp() {
-        hazardSafetyEvaluator = new HazardSafetyEvaluator(districtBoundaryRepository, riskCalculationService);
+        thresholds = new SafeSiteThresholds();
         candidateSafeSiteService = new CandidateSafeSiteService(
-                dataProvider, redZoneService, hazardSafetyEvaluator, terrainEvaluator, distanceEvaluator, roadAccessibilityEvaluator, healthcareEvaluator, waterEvaluator, infrastructureEvaluator, suitabilityEvaluator, safeSiteRankingEvaluator);
+                dataProvider,
+                redZoneService,
+                districtBoundaryRepository,
+                terrainService,
+                riskCalculationService,
+                thresholds
+        );
     }
 
     private DistrictBoundary createBoundary(String name) {
@@ -93,7 +78,7 @@ class HazardSafetyTests {
         DistrictRiskScoreDto dto = new DistrictRiskScoreDto();
         dto.setDistrictName(name);
         dto.setRiskScore(score);
-        dto.setRiskScore100(score * 100.0);
+        dto.setRiskScore100(Math.round(score * 1000.0) / 10.0);
         dto.setRiskTier(tier);
         return dto;
     }
@@ -138,11 +123,11 @@ class HazardSafetyTests {
     }
 
     // =========================================================================
-    // 2. HazardSafetyEvaluator Spatial Point-in-Polygon & Risk Slicing Tests
+    // 2. Spatial Point-in-Polygon & Risk Slicing Tests
     // =========================================================================
 
     @Nested
-    @DisplayName("5.3.2: HazardSafetyEvaluator Spatial Risk Evaluation")
+    @DisplayName("5.3.2: Spatial Hazard Safety Risk Evaluation")
     class EvaluatorTests {
 
         @Test
@@ -160,7 +145,7 @@ class HazardSafetyTests {
             when(riskCalculationService.getDistrictRiskScore("Sitamarhi", null))
                     .thenReturn(createRiskScore("Sitamarhi", 0.85, RiskTier.CRITICAL));
 
-            hazardSafetyEvaluator.evaluateHazardSafety(site);
+            candidateSafeSiteService.evaluateHazardSafety(site);
 
             assertEquals(HazardSafetyStatus.AT_RISK, site.getHazardSafetyStatus());
             assertEquals("CRITICAL", site.getRiskZone());
@@ -184,7 +169,7 @@ class HazardSafetyTests {
             when(riskCalculationService.getDistrictRiskScore("Supaul", null))
                     .thenReturn(createRiskScore("Supaul", 0.72, RiskTier.VERY_HIGH));
 
-            hazardSafetyEvaluator.evaluateHazardSafety(site);
+            candidateSafeSiteService.evaluateHazardSafety(site);
 
             assertEquals(HazardSafetyStatus.AT_RISK, site.getHazardSafetyStatus());
             assertEquals("CRITICAL", site.getRiskZone());
@@ -205,7 +190,7 @@ class HazardSafetyTests {
             when(riskCalculationService.getDistrictRiskScore("Patna", null))
                     .thenReturn(createRiskScore("Patna", 0.55, RiskTier.HIGH));
 
-            hazardSafetyEvaluator.evaluateHazardSafety(site);
+            candidateSafeSiteService.evaluateHazardSafety(site);
 
             assertEquals(HazardSafetyStatus.AT_RISK, site.getHazardSafetyStatus());
             assertEquals("HIGH", site.getRiskZone());
@@ -226,7 +211,7 @@ class HazardSafetyTests {
             when(riskCalculationService.getDistrictRiskScore("Gaya", null))
                     .thenReturn(createRiskScore("Gaya", 0.32, RiskTier.MODERATE));
 
-            hazardSafetyEvaluator.evaluateHazardSafety(site);
+            candidateSafeSiteService.evaluateHazardSafety(site);
 
             assertEquals(HazardSafetyStatus.SAFE, site.getHazardSafetyStatus());
             assertEquals("MODERATE", site.getRiskZone());
@@ -248,7 +233,7 @@ class HazardSafetyTests {
             when(riskCalculationService.getDistrictRiskScore("SafeDistrict", null))
                     .thenReturn(createRiskScore("SafeDistrict", 0.12, RiskTier.LOW));
 
-            hazardSafetyEvaluator.evaluateHazardSafety(site);
+            candidateSafeSiteService.evaluateHazardSafety(site);
 
             assertEquals(HazardSafetyStatus.SAFE, site.getHazardSafetyStatus());
             assertEquals("LOW", site.getRiskZone());
@@ -264,7 +249,7 @@ class HazardSafetyTests {
             site.setLatitude(null);
             site.setLongitude(null);
 
-            hazardSafetyEvaluator.evaluateHazardSafety(site);
+            candidateSafeSiteService.evaluateHazardSafety(site);
 
             assertEquals(HazardSafetyStatus.UNKNOWN, site.getHazardSafetyStatus());
             assertEquals("UNKNOWN", site.getRiskZone());
@@ -280,7 +265,7 @@ class HazardSafetyTests {
             site.setLatitude(120.0); // Invalid latitude > 90
             site.setLongitude(85.0);
 
-            hazardSafetyEvaluator.evaluateHazardSafety(site);
+            candidateSafeSiteService.evaluateHazardSafety(site);
 
             assertEquals(HazardSafetyStatus.UNKNOWN, site.getHazardSafetyStatus());
             assertEquals("UNKNOWN", site.getRiskZone());
@@ -299,7 +284,7 @@ class HazardSafetyTests {
             when(districtBoundaryRepository.findDistrictContainingPoint(75.0, 20.0))
                     .thenReturn(Optional.empty());
 
-            hazardSafetyEvaluator.evaluateHazardSafety(site);
+            candidateSafeSiteService.evaluateHazardSafety(site);
 
             assertEquals(HazardSafetyStatus.UNKNOWN, site.getHazardSafetyStatus());
             assertEquals("UNKNOWN", site.getRiskZone());
@@ -321,7 +306,7 @@ class HazardSafetyTests {
             when(riskCalculationService.getDistrictRiskScore("UnknownArea", null))
                     .thenReturn(null);
 
-            hazardSafetyEvaluator.evaluateHazardSafety(site);
+            candidateSafeSiteService.evaluateHazardSafety(site);
 
             assertEquals(HazardSafetyStatus.UNKNOWN, site.getHazardSafetyStatus());
             assertEquals("UNKNOWN", site.getRiskZone());
@@ -346,7 +331,7 @@ class HazardSafetyTests {
             when(riskCalculationService.getDistrictRiskScore("PartialDataArea", null))
                     .thenReturn(partial);
 
-            hazardSafetyEvaluator.evaluateHazardSafety(site);
+            candidateSafeSiteService.evaluateHazardSafety(site);
 
             assertEquals(HazardSafetyStatus.UNKNOWN, site.getHazardSafetyStatus());
             assertNull(site.getRiskScore());
@@ -461,13 +446,20 @@ class HazardSafetyTests {
             assertNotNull(geojson);
             assertEquals(2, geojson.getCount());
 
-            var firstProps = geojson.getFeatures().get(0).getProperties();
+            var atRiskFeature = geojson.getFeatures().stream()
+                    .filter(f -> "FAC-EMG-003".equals(f.getProperties().get("siteId")))
+                    .findFirst().orElseThrow();
+            var safeFeature = geojson.getFeatures().stream()
+                    .filter(f -> "FAC-MED-008".equals(f.getProperties().get("siteId")))
+                    .findFirst().orElseThrow();
+
+            var firstProps = atRiskFeature.getProperties();
             assertEquals("AT_RISK", firstProps.get("hazardSafetyStatus"));
             assertNotNull(firstProps.get("hazardSafetyReason"));
             assertEquals("CRITICAL", firstProps.get("riskZone"));
             assertEquals(85.0, firstProps.get("riskScore"));
 
-            var secondProps = geojson.getFeatures().get(1).getProperties();
+            var secondProps = safeFeature.getProperties();
             assertEquals("SAFE", secondProps.get("hazardSafetyStatus"));
             assertNotNull(secondProps.get("hazardSafetyReason"));
             assertEquals("LOW", secondProps.get("riskZone"));
