@@ -25,7 +25,8 @@ export async function runSettlementTests() {
     // Header & Breadcrumbs
     assert.ok(contentHtml.includes("Sonbarsa Flood Inundation Area"), "Should render settlement title");
     assert.ok(contentHtml.includes("HAB-SIT-001"), "Should render settlement ID");
-    assert.ok(contentHtml.includes("Sitamarhi District"), "Should render district name");
+    assert.ok(contentHtml.includes("Sitamarhi"), "Should render district name");
+    assert.ok(contentHtml.includes("Block: Sonbarsa"), "Should render administrative block context");
 
     // Risk Hero & Pillars
     assert.ok(contentHtml.includes("OVERALL DISASTER RISK"), "Should render Overall Disaster Risk section");

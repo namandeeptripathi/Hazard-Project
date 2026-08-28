@@ -5,10 +5,10 @@
  */
 export class Navigation {
     static NAV_ITEMS = [
-        { id: "overview", label: "Overview", icon: "📊", path: "#/overview", badge: null },
-        { id: "map", label: "Map", icon: "🗺️", path: "#/map", badge: "GIS" },
-        { id: "safe-sites", label: "Safe Sites", icon: "🛡️", path: "#/safe-sites", badge: null },
-        { id: "relocation", label: "Relocation", icon: "🚚", path: "#/relocation", badge: "Stage 7" }
+        { id: "overview", label: "Overview", icon: "", path: "#/overview", badge: null },
+        { id: "map", label: "Map", icon: "", path: "#/map", badge: null },
+        { id: "safe-sites", label: "Safe Sites", icon: "", path: "#/safe-sites", badge: null },
+        { id: "relocation", label: "Relocation", icon: "", path: "#/relocation", badge: null }
     ];
 
     /**
@@ -36,7 +36,7 @@ export class Navigation {
             return `
                 <li>
                     <a href="${item.path}" class="nav-link ${activeClass}" ${ariaCurrent} id="nav-${item.id}">
-                        <span class="nav-icon" aria-hidden="true">${item.icon}</span>
+                        ${item.icon ? `<span class="nav-icon" aria-hidden="true">${item.icon}</span>` : ""}
                         <span class="nav-label">${item.label}</span>
                         ${badgeHtml}
                     </a>
@@ -52,7 +52,7 @@ export class Navigation {
 
                 <div class="sidebar-footer">
                     <div class="sidebar-region-badge">
-                        <div class="sidebar-region-label">Active Jurisdiction</div>
+                        <div class="sidebar-region-label">ACTIVE JURISDICTION</div>
                         <div class="sidebar-region-name">${region}</div>
                     </div>
                 </div>

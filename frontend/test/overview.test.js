@@ -36,7 +36,7 @@ export async function runOverviewTests() {
     const dashboardHtml = view.renderDashboardContent();
     assert.ok(dashboardHtml.includes("HIGH-RISK SETTLEMENTS"), "Should render High-Risk Settlements KPI");
     assert.ok(dashboardHtml.includes("RED-ZONE SETTLEMENTS"), "Should render Red-Zone Settlements KPI");
-    assert.ok(dashboardHtml.includes("PEOPLE REQUIRING RELOCATION"), "Should render People Requiring Relocation KPI");
+    assert.ok(dashboardHtml.includes("POPULATION EXPOSED"), "Should render Population Exposed KPI");
     assert.ok(dashboardHtml.includes("AVAILABLE SAFE CAPACITY"), "Should render Safe Capacity KPI");
 
     // Test 4: Priority settlement rows & navigation links
@@ -47,8 +47,8 @@ export async function runOverviewTests() {
 
     // Test 5: Operational summary grid
     assert.ok(dashboardHtml.includes("Multi-Hazard Risk Situation"), "Should render Risk Situation card");
-    assert.ok(dashboardHtml.includes("Relocation & Convoy Readiness"), "Should render Relocation Readiness card");
-    assert.ok(dashboardHtml.includes("Safe Shelter Capacity Balance"), "Should render Shelter Capacity Balance card");
+    assert.ok(dashboardHtml.includes("Evacuation Readiness"), "Should render Evacuation Readiness card");
+    assert.ok(dashboardHtml.includes("Shelter Logistics Balance"), "Should render Shelter Logistics Balance card");
 
     console.log("  ✅ All Command Center Tests Passed.");
 }

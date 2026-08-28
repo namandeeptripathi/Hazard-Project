@@ -10,32 +10,32 @@ export class StatusBadge {
     static getVariant(term = "") {
         const normalized = String(term).toUpperCase().trim();
 
-        // Priority Levels (Stage 7A)
+        // Priority Levels
         if (normalized === "IMMEDIATE" || normalized === "CRITICAL" || normalized === "RED_ZONE") {
-            return { variant: "critical", label: "Immediate Priority", icon: "🔴" };
+            return { variant: "critical", label: "Immediate Priority", icon: "" };
         }
         if (normalized === "SHORT_TERM" || normalized === "HIGH" || normalized === "HIGH_RISK") {
-            return { variant: "warning", label: "Short-Term", icon: "🟠" };
+            return { variant: "warning", label: "Short-Term", icon: "" };
         }
         if (normalized === "MEDIUM_TERM" || normalized === "MODERATE") {
-            return { variant: "moderate", label: "Medium-Term", icon: "🟣" };
+            return { variant: "neutral", label: "Medium-Term", icon: "" };
         }
         if (normalized === "MONITORING" || normalized === "LOW" || normalized === "NEUTRAL") {
-            return { variant: "neutral", label: "Monitoring", icon: "⚪" };
+            return { variant: "neutral", label: "Monitoring", icon: "" };
         }
 
-        // Recommendation & Allocation Statuses (Stage 6 & 7B)
+        // Recommendation & Allocation Statuses
         if (normalized === "RECOMMENDED" || normalized === "ALLOCATED" || normalized === "SAFE" || normalized === "HIGHLY_SUITABLE") {
-            return { variant: "safe", label: normalized.replace(/_/g, " "), icon: "🟢" };
+            return { variant: "safe", label: normalized.replace(/_/g, " "), icon: "" };
         }
         if (normalized === "SUITABLE" || normalized === "PARTIALLY_ALLOCATED") {
-            return { variant: "info", label: normalized.replace(/_/g, " "), icon: "🔵" };
+            return { variant: "info", label: normalized.replace(/_/g, " "), icon: "" };
         }
         if (normalized === "MARGINAL" || normalized === "CAPACITY_DEFICIT" || normalized === "PARTIAL_DEFICIT") {
-            return { variant: "warning", label: normalized.replace(/_/g, " "), icon: "🟡" };
+            return { variant: "warning", label: normalized.replace(/_/g, " "), icon: "" };
         }
         if (normalized === "NO_FEASIBLE_DESTINATION" || normalized === "UNSUITABLE" || normalized === "UNALLOCATED_NO_SAFE_SITE" || normalized === "AT_RISK") {
-            return { variant: "critical", label: normalized.replace(/_/g, " "), icon: "⛔" };
+            return { variant: "critical", label: normalized.replace(/_/g, " "), icon: "" };
         }
 
         return { variant: "neutral", label: term, icon: "" };
@@ -61,7 +61,7 @@ export class StatusBadge {
 
         const variant = props?.variant || meta.variant;
         const label = props?.label || meta.label || status;
-        const icon = (props?.showIcon !== false && meta.icon) ? `<span aria-hidden="true">${meta.icon}</span> ` : "";
+        const icon = (props?.showIcon && meta.icon) ? `<span aria-hidden="true">${meta.icon}</span> ` : "";
 
         return `<span class="badge badge-${variant}">${icon}${label}</span>`;
     }

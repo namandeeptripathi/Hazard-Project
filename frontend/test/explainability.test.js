@@ -33,7 +33,7 @@ export async function runExplainabilityTests() {
     assert.ok(drawerHtml.includes("WHO:"), "Drawer should render WHO rationale");
     assert.ok(drawerHtml.includes("WHERE:"), "Drawer should render WHERE rationale");
     assert.ok(drawerHtml.includes("WHY:"), "Drawer should render WHY rationale");
-    assert.ok(drawerHtml.includes("⚡ ACTION:"), "Drawer should render ACTION guidance");
+    assert.ok(drawerHtml.includes("ACTION:"), "Drawer should render ACTION guidance");
 
     // Test 2: Factor weights and contributor bars
     assert.ok(drawerHtml.includes("Hazard Exposure"), "Drawer should list Hazard Exposure contributor");
@@ -53,7 +53,7 @@ export async function runExplainabilityTests() {
 
     assert.ok(minimalHtml.includes("Minimal Settlement"), "Minimal drawer should render settlement name");
     assert.ok(minimalHtml.includes("SHORT_TERM"), "Minimal drawer should render priority badge");
-    assert.ok(minimalHtml.includes("✓ Verified Valid"), "Minimal drawer should render valid status");
+    assert.ok(minimalHtml.includes("Verified Valid"), "Minimal drawer should render valid status");
 
     console.log("  ✅ All Explainability Intelligence Tests Passed.");
 }

@@ -57,8 +57,8 @@ export class MapView {
             subtitle: "Multi-hazard spatial overlays, active red-zone inundation polygons, settlements, and evacuation transit corridors.",
             breadcrumbs: [{ label: "Home", path: "#/overview" }, { label: "Spatial Map" }],
             actionsHtml: `
-                <button type="button" class="btn btn-sm btn-secondary" id="btnRecenterMap">🎯 Recenter</button>
-                <button type="button" class="btn btn-sm btn-primary" onclick="window.location.hash='#/relocation'">🚚 Relocation Planner</button>
+                <button type="button" class="btn btn-sm btn-secondary" id="btnRecenterMap">Recenter</button>
+                <button type="button" class="btn btn-sm btn-primary" onclick="window.location.hash='#/relocation'">Relocation Planner</button>
             `
         });
 
@@ -216,7 +216,8 @@ export class MapView {
      */
     async loadSpatialData() {
         try {
-            const [settlementRes, safeSiteRes, hazardRes] = await Promise.allSettled([
+            const [relocationRes, settlementRes, safeSiteRes, hazardRes] = await Promise.allSettled([
+                relocationService.queryDecisions(this.state.district),
                 settlementService.getDistrictSettlementExposure(this.state.district),
                 safeSiteService.getSitesByDistrict(this.state.district),
                 hazardService.getLayerGeoJson("FLOOD_HAZARD_SCORES", this.state.district)
@@ -226,9 +227,35 @@ export class MapView {
             let safeSites = [];
             let hazardGeoJson = null;
 
-            if (settlementRes.status === "fulfilled" && settlementRes.value?.success && settlementRes.value?.data) {
+            if (relocationRes.status === "fulfilled" && relocationRes.value?.success && relocationRes.value?.data) {
+                const decData = relocationRes.value.data;
+                const decisionsList = decData.decisions || (Array.isArray(decData) ? decData : []);
+                if (decisionsList.length > 0) {
+                    settlements = decisionsList.map(d => ({
+                        habitationId: d.habitationId || d.originHabitationId,
+                        settlementName: d.originHabitationName || d.habitationName || d.habitationId,
+                        district: this.state.district,
+                        latitude: d.latitude || d.originLatitude,
+                        longitude: d.longitude || d.originLongitude,
+                        population: d.requiredCapacity || d.allocatedPopulation || 250,
+                        riskScore: d.riskExplanation?.priorityScore || d.riskScore || 0.85,
+                        priorityScore: d.priorityScore || 0.85,
+                        priorityLevel: d.priorityLevel || "IMMEDIATE",
+                        exposureTier: d.priorityLevel === "IMMEDIATE" ? "CRITICAL" : "HIGH",
+                        isRedZone: d.priorityLevel === "IMMEDIATE",
+                        recommendedSiteId: d.primaryDestinationId || d.destinationSiteId,
+                        recommendedSiteName: d.primaryDestinationName || d.destinationSiteName || "Designated Safe Shelter",
+                        transitDistanceKm: d.transitDistanceKm || 2.50
+                    }));
+                }
+            }
+
+            if (settlements.length === 0 && settlementRes.status === "fulfilled" && settlementRes.value?.success && settlementRes.value?.data) {
                 const sData = settlementRes.value.data;
-                settlements = sData.settlements || sData.exposedSettlements || [];
+                const rawList = sData.settlements || sData.exposedSettlements || [];
+                if (rawList.length > 0) {
+                    settlements = rawList;
+                }
             }
 
             if (safeSiteRes.status === "fulfilled" && safeSiteRes.value?.success && safeSiteRes.value?.data) {
@@ -240,10 +267,16 @@ export class MapView {
                 hazardGeoJson = hazardRes.value.data;
             }
 
-            // Apply authentic fixtures if backend is offline in development mode
-            if (settlements.length === 0) settlements = MOCK_SETTLEMENTS;
-            if (safeSites.length === 0) safeSites = MOCK_SAFE_SITES;
-            if (!hazardGeoJson) hazardGeoJson = MOCK_HAZARD_POLYGONS;
+            // Apply authentic fixtures if backend is offline or decision data is absent
+            if (settlements.length === 0 || !settlements.some(s => s.priorityLevel)) {
+                settlements = MOCK_SETTLEMENTS;
+            }
+            if (safeSites.length === 0) {
+                safeSites = MOCK_SAFE_SITES;
+            }
+            if (!hazardGeoJson) {
+                hazardGeoJson = MOCK_HAZARD_POLYGONS;
+            }
 
             this.state.settlements = settlements;
             this.state.safeSites = safeSites;
@@ -327,7 +360,7 @@ export class MapView {
                 <div class="map-popup-card">
                     <div class="map-popup-header">
                         <div>
-                            <div class="map-popup-title">🔴 Red Zone Inundation Buffer</div>
+                            <div class="map-popup-title">Red Zone Inundation Buffer</div>
                             <div class="map-popup-subtitle">${s.settlementName}</div>
                         </div>
                         <span class="badge badge-critical">IMMEDIATE</span>
@@ -377,39 +410,43 @@ export class MapView {
                 fillOpacity: 0.95
             });
 
+            const priorityLevel = s.priorityLevel || "EVALUATED";
+            const statusLabel = priorityLevel.replace('_', ' ');
             const scoreDisplay = typeof s.priorityScore === "number" ? s.priorityScore.toFixed(2) : "--";
-            const popDisplay = s.population ? s.population.toLocaleString() : "--";
+            const popDisplay = s.population ? s.population.toLocaleString() : (s.totalPopulation ? s.totalPopulation.toLocaleString() : "--");
             const destDisplay = s.recommendedSiteName || "Designated Safe Shelter";
+            const sName = s.settlementName || s.habitationId || "Settlement";
+            const blockName = s.block ? s.block.replace(' Block', '') : (sName.includes('Sonbarsa') ? 'Sonbarsa' : (sName.includes('Bairgania') ? 'Bairgania' : (sName.includes('Riga') ? 'Riga' : (sName.includes('Sursand') ? 'Sursand' : (sName.includes('Saidpur') ? 'Runni Saidpur' : 'Majorganj')))));
 
             const popupHtml = `
                 <div class="map-popup-card">
                     <div class="map-popup-header">
                         <div>
-                            <div class="map-popup-title">${s.settlementName}</div>
-                            <div class="map-popup-subtitle">${s.habitationId} | ${s.district}</div>
+                            <div class="map-popup-title">${sName}</div>
+                            <div class="map-popup-subtitle">Block: ${blockName}, ${s.district || 'Sitamarhi'} | ID: ${s.habitationId || s.settlementId || '--'}</div>
                         </div>
-                        ${StatusBadge.render({ status: s.priorityLevel, label: s.priorityLevel.replace('_', ' ') })}
+                        ${StatusBadge.render({ status: priorityLevel, label: statusLabel })}
                     </div>
                     <div class="map-popup-body">
                         <div class="map-popup-row">
                             <span class="map-popup-label">Priority Score:</span>
-                            <span class="map-popup-value" style="color: ${s.priorityLevel === 'IMMEDIATE' ? 'var(--status-critical-text)' : 'var(--status-warning-text)'};">${scoreDisplay} / 1.00</span>
+                            <span class="map-popup-value" style="color: ${priorityLevel === 'IMMEDIATE' ? 'var(--status-critical-text)' : 'var(--status-warning-text)'};">${scoreDisplay} / 1.00</span>
                         </div>
                         <div class="map-popup-row">
-                            <span class="map-popup-label">Evacuee Population:</span>
+                            <span class="map-popup-label">Exposed Population:</span>
                             <span class="map-popup-value">${popDisplay}</span>
                         </div>
                         <div class="map-popup-row">
                             <span class="map-popup-label">Assigned Safe Site:</span>
-                            <span class="map-popup-value" style="color: var(--status-safe-text); font-weight: 600;">➔ ${destDisplay}</span>
+                            <span class="map-popup-value" style="color: var(--status-safe-text); font-weight: 600;">${destDisplay}</span>
                         </div>
                     </div>
                     <div class="map-popup-actions" style="display: flex; gap: var(--space-2); margin-top: var(--space-2);">
-                        <button type="button" class="btn btn-xs btn-outline" style="flex: 1;" onclick="window.__openMapExplainability && window.__openMapExplainability('${s.habitationId}')">
-                            💡 Why?
+                        <button type="button" class="btn btn-xs btn-outline" style="flex: 1;" onclick="window.__openMapExplainability && window.__openMapExplainability('${s.habitationId || s.settlementId}')">
+                            Why?
                         </button>
-                        <button type="button" class="btn btn-xs btn-primary" style="flex: 2;" onclick="window.location.hash='#/settlements/${encodeURIComponent(s.habitationId)}'">
-                            Inspect Details ➔
+                        <button type="button" class="btn btn-xs btn-primary" style="flex: 2;" onclick="window.location.hash='#/settlements/${encodeURIComponent(s.habitationId || s.settlementId)}'">
+                            Inspect Details
                         </button>
                     </div>
                 </div>
@@ -486,12 +523,12 @@ export class MapView {
                         </div>
                         <div class="map-popup-row">
                             <span class="map-popup-label">Hazard Safety:</span>
-                            <span class="map-popup-value" style="color: var(--status-safe-text);">🟢 Outside Flood Basin</span>
+                            <span class="map-popup-value" style="color: var(--status-safe-text);">Outside Flood Basin</span>
                         </div>
                     </div>
                     <div class="map-popup-actions">
                         <button type="button" class="btn btn-sm btn-outline" style="width: 100%;" onclick="window.location.hash='#/safe-sites'">
-                            Inspect Shelter Capacity ➔
+                            Inspect Shelter Capacity
                         </button>
                     </div>
                 </div>
@@ -532,7 +569,7 @@ export class MapView {
 
             polyline.bindPopup(`
                 <div class="map-popup-card">
-                    <div class="map-popup-title">🚚 Relocation Transit Corridor</div>
+                    <div class="map-popup-title">Relocation Transit Corridor</div>
                     <div style="font-size: 0.8rem; margin-top: 4px;">
                         <strong>Origin:</strong> ${s.settlementName}<br/>
                         <strong>Destination:</strong> ${destSite.name}<br/>

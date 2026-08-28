@@ -122,8 +122,8 @@ export class SafeSitesView {
                 { label: "Safe Sites" }
             ],
             actionsHtml: `
-                <a href="#/map" class="btn btn-sm btn-outline">🗺️ View on GIS Map</a>
-                <a href="#/relocation" class="btn btn-sm btn-primary">🚚 Relocation Planner</a>
+                <a href="#/map" class="btn btn-sm btn-outline">View on GIS Map</a>
+                <a href="#/relocation" class="btn btn-sm btn-primary">Relocation Planner</a>
             `
         });
 
@@ -138,29 +138,29 @@ export class SafeSitesView {
                 ${StatCard.render({
                     label: "Validated Safe Sites",
                     value: this.state.sites.length.toString(),
-                    icon: "🛡️",
-                    subtitle: "All certified outside flood risk boundary",
+                    icon: "",
+                    subtitle: "Certified outside flood zone",
                     status: "neutral"
                 })}
                 ${StatCard.render({
                     label: "Total Safe Capacity",
                     value: totalCapacity.toLocaleString(),
-                    icon: "🏢",
-                    subtitle: "Approved bed capacity across district",
+                    icon: "",
+                    subtitle: "Total bed capacity",
                     status: "info"
                 })}
                 ${StatCard.render({
                     label: "Allocated / Occupied",
                     value: totalAllocated.toLocaleString(),
-                    icon: "👥",
-                    subtitle: `${utilPct}% capacity reserved for evacuees`,
+                    icon: "",
+                    subtitle: `${utilPct}% capacity allocated`,
                     status: "warning"
                 })}
                 ${StatCard.render({
                     label: "Available Safe Headroom",
                     value: totalAvailable.toLocaleString(),
-                    icon: "🟢",
-                    subtitle: `${(100 - parseFloat(utilPct)).toFixed(1)}% surplus headroom free`,
+                    icon: "",
+                    subtitle: `${(100 - parseFloat(utilPct)).toFixed(1)}% headroom free`,
                     status: "safe"
                 })}
             </div>
@@ -192,8 +192,8 @@ export class SafeSitesView {
                 ${headerHtml}
                 ${kpisHtml}
                 ${SectionHeader.render({
-                    title: "Safe Shelter Inventory & Allocation Directory",
-                    subtitle: "Granular bed capacity, occupancy breakdown, and facility operational readiness"
+                    title: "Safe Shelter Directory",
+                    subtitle: "Available shelters, capacity, suitability, and operational readiness."
                 })}
                 ${filterBarHtml}
                 <div id="sites-grid-container">
@@ -237,66 +237,53 @@ export class SafeSitesView {
 
         return Card.render({
             title: site.name || site.siteId,
-            icon: "🛡️",
+            icon: "",
             headerAction: StatusBadge.render({
                 status: site.suitabilityClass || "HIGHLY_SUITABLE",
                 label: site.suitabilityClass === "HIGHLY_SUITABLE" ? "Highly Suitable" : "Suitable"
             }),
             bodyHtml: `
                 <div style="display: flex; flex-direction: column; gap: var(--space-3); font-size: 0.82rem;">
-                    <div style="display: flex; justify-content: space-between; align-items: center;">
-                        <span style="color: var(--text-secondary);">Facility GID:</span>
-                        <span style="font-family: var(--font-family-mono); color: var(--status-info-bright); font-weight: 700;">${site.siteId}</span>
-                    </div>
-
-                    <div style="display: flex; justify-content: space-between; align-items: center;">
-                        <span style="color: var(--text-secondary);">Category:</span>
-                        <span class="badge badge-neutral">${site.category || 'EMERGENCY_SHELTER'}</span>
-                    </div>
-
-                    <!-- Capacity Utilization -->
+                    <!-- Primary: Capacity Utilization -->
                     <div class="capacity-utilization-container">
-                        <div class="capacity-legend-row">
-                            <span style="color: var(--text-secondary);">Capacity Utilization:</span>
-                            <strong>${allocated.toLocaleString()} / ${total.toLocaleString()} beds (${allocPct}% used)</strong>
+                        <div class="capacity-legend-row" style="margin-bottom: 6px;">
+                            <span style="font-size: 0.88rem; font-weight: 700; color: var(--text-primary);">${available.toLocaleString()} beds available</span>
+                            <span style="font-size: 0.75rem; color: var(--text-secondary);">${allocated.toLocaleString()} / ${total.toLocaleString()} (${allocPct}% used)</span>
                         </div>
                         <div class="capacity-utilization-bar">
                             <div class="capacity-bar-allocated" style="width: ${allocPct}%;"></div>
                             <div class="capacity-bar-available" style="width: ${availPct}%;"></div>
                         </div>
-                        <div class="capacity-legend-row" style="color: var(--text-tertiary); font-size: 0.72rem;">
-                            <span>🟦 Allocated: ${allocated.toLocaleString()} beds</span>
-                            <span style="color: var(--status-safe-text); font-weight: 700;">🟩 Free: ${available.toLocaleString()} beds</span>
+                        <div class="capacity-legend-row" style="color: var(--text-tertiary); font-size: 0.72rem; margin-top: 4px;">
+                            <span>Allocated: ${allocated.toLocaleString()} beds</span>
+                            <span style="color: var(--status-safe-text); font-weight: 600;">Free: ${available.toLocaleString()} beds</span>
                         </div>
                     </div>
 
-                    <!-- Essential Logistics -->
-                    <div style="background: var(--bg-surface-elevated); padding: var(--space-2) var(--space-3); border-radius: var(--radius-md); border: 1px solid var(--border-subtle); display: flex; flex-direction: column; gap: 4px; font-size: 0.75rem;">
-                        <div style="display: flex; justify-content: space-between;">
-                            <span style="color: var(--text-secondary);">Sanitation / Toilets:</span>
-                            <strong>${site.sanitationFacilities || 'Operational'}</strong>
-                        </div>
-                        <div style="display: flex; justify-content: space-between;">
-                            <span style="color: var(--text-secondary);">Medical Triage:</span>
-                            <strong style="color: var(--status-safe-text);">${site.medicalUnit || 'Emergency First Aid'}</strong>
-                        </div>
+                    <!-- Secondary: Facility Metadata & Logistics -->
+                    <div style="display: flex; justify-content: space-between; align-items: center; font-size: 0.75rem; color: var(--text-tertiary); padding-top: var(--space-2); border-top: 1px solid var(--border-subtle);">
+                        <span>Facility GID: <span style="font-family: var(--font-family-mono); color: var(--text-secondary); font-weight: 600;">${site.siteId}</span></span>
+                        <span>${(site.category || 'EMERGENCY_SHELTER').replace(/_/g, ' ')}</span>
                     </div>
 
-                    <!-- Assigned Habitations -->
+                    <div style="display: flex; justify-content: space-between; font-size: 0.75rem; color: var(--text-secondary);">
+                        <span>Sanitation: <strong style="color: var(--text-primary); font-weight: 500;">${site.sanitationFacilities || 'Operational'}</strong></span>
+                        <span>Medical Triage: <strong style="color: var(--text-primary); font-weight: 500;">${site.medicalUnit || 'Emergency First Aid'}</strong></span>
+                    </div>
+
+                    <!-- Secondary: Assigned Habitations -->
                     ${site.assignedHabitations && site.assignedHabitations.length > 0 ? `
-                        <div>
-                            <span style="font-size: 0.72rem; color: var(--text-secondary); text-transform: uppercase; font-weight: 700;">Assigned Evacuation Origins:</span>
-                            <div style="display: flex; flex-wrap: wrap; gap: 4px; margin-top: 4px;">
-                                ${site.assignedHabitations.map(h => `<span class="badge badge-info" style="font-size: 0.7rem;">📍 ${h}</span>`).join("")}
-                            </div>
+                        <div style="font-size: 0.72rem; color: var(--text-tertiary); padding-top: 2px;">
+                            <span style="font-weight: 500;">Assigned Evacuation Origins: </span>
+                            <span style="color: var(--text-secondary);">${site.assignedHabitations.join(", ")}</span>
                         </div>
                     ` : ''}
                 </div>
             `,
             footerHtml: `
                 <div style="display: flex; justify-content: space-between; width: 100%; align-items: center;">
-                    <button type="button" class="btn btn-sm btn-outline site-detail-btn" data-site-id="${site.siteId}">Inspect Details</button>
-                    <a href="#/map" class="btn btn-sm btn-secondary">View on Map ➔</a>
+                    <button type="button" class="btn btn-xs btn-outline site-detail-btn" data-site-id="${site.siteId}">Inspect Details</button>
+                    <a href="#/map" class="btn btn-xs btn-secondary">View on Map</a>
                 </div>
             `
         });
@@ -356,7 +343,7 @@ export class SafeSitesView {
                             <h3 style="font-size: 1.1rem; font-weight: 700; color: var(--text-primary);">${site.name}</h3>
                             <span style="font-size: 0.75rem; color: var(--text-secondary);">Facility ID: ${site.siteId} | ${site.district}, Bihar</span>
                         </div>
-                        <button type="button" class="btn btn-sm btn-outline" id="closeSiteModalBtn">✕ Close</button>
+                        <button type="button" class="btn btn-sm btn-outline" id="closeSiteModalBtn">Close</button>
                     </div>
 
                     <div style="padding: var(--space-4); display: flex; flex-direction: column; gap: var(--space-4);">
@@ -379,42 +366,42 @@ export class SafeSitesView {
                         <!-- 5-Point Suitability Factors -->
                         <div>
                             <h4 style="font-size: 0.85rem; font-weight: 700; color: var(--text-secondary); text-transform: uppercase; margin-bottom: var(--space-2);">
-                                5-Point Suitability Verification (Stage 5)
+                                5-Point Suitability Verification
                             </h4>
                             <div style="display: flex; flex-direction: column; gap: var(--space-2); font-size: 0.8rem;">
                                 <div class="feasibility-gate-card pass">
                                     <span><strong>1. Hazard Safety:</strong> Certified outside 100-year flood inundation buffer</span>
-                                    <span class="badge badge-safe">✓ SAFE</span>
+                                    <span class="badge badge-safe">SAFE</span>
                                 </div>
                                 <div class="feasibility-gate-card pass">
                                     <span><strong>2. Terrain Stability:</strong> Elevated natural ground elevation</span>
-                                    <span class="badge badge-safe">✓ FAVORABLE</span>
+                                    <span class="badge badge-safe">FAVORABLE</span>
                                 </div>
                                 <div class="feasibility-gate-card pass">
                                     <span><strong>3. Road Accessibility:</strong> Direct connection to elevated arterial state highway</span>
-                                    <span class="badge badge-safe">✓ NEAR</span>
+                                    <span class="badge badge-safe">NEAR</span>
                                 </div>
                                 <div class="feasibility-gate-card pass">
                                     <span><strong>4. Healthcare Readiness:</strong> ${site.medicalUnit || 'First Aid Post'}</span>
-                                    <span class="badge badge-safe">✓ NEAR</span>
+                                    <span class="badge badge-safe">NEAR</span>
                                 </div>
                                 <div class="feasibility-gate-card pass">
                                     <span><strong>5. Logistics Support:</strong> ${site.sanitationFacilities || '30+ Sanitation Units'} & Generator Backup</span>
-                                    <span class="badge badge-safe">✓ READY</span>
+                                    <span class="badge badge-safe">READY</span>
                                 </div>
                             </div>
                         </div>
 
-                        <!-- Assigned Habitations -->
+                        <!-- Assigned Settlement Origins -->
                         <div>
                             <h4 style="font-size: 0.85rem; font-weight: 700; color: var(--text-secondary); text-transform: uppercase; margin-bottom: var(--space-2);">
-                                Assigned Habitations
+                                Assigned Settlement Origins
                             </h4>
                             <div style="display: flex; flex-direction: column; gap: var(--space-1); font-size: 0.8rem;">
                                 ${(site.assignedHabitations || ["Sonbarsa Flood Inundation Area"]).map(h => `
                                     <div style="padding: var(--space-2) var(--space-3); background: var(--bg-surface); border: 1px solid var(--border-subtle); border-radius: var(--radius-md); display: flex; justify-content: space-between; align-items: center;">
-                                        <span>📍 ${h}</span>
-                                        <a href="#/relocation" class="btn btn-xs btn-primary">View Relocation Plan ➔</a>
+                                        <span>${h}</span>
+                                        <a href="#/relocation" class="btn btn-xs btn-primary">View Relocation Plan</a>
                                     </div>
                                 `).join("")}
                             </div>

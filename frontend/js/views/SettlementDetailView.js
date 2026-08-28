@@ -164,7 +164,7 @@ export class SettlementDetailView {
     renderSettlementContent(s, site) {
         const headerHtml = PageHeader.render({
             title: s.settlementName,
-            subtitle: `${s.district} District • ${s.block || 'Administrative Block'} | ID: ${s.habitationId}`,
+            subtitle: `Block: ${s.block ? s.block.replace(' Block', '') : (s.settlementName.includes('Sonbarsa') ? 'Sonbarsa' : (s.settlementName.includes('Bairgania') ? 'Bairgania' : (s.settlementName.includes('Riga') ? 'Riga' : (s.settlementName.includes('Sursand') ? 'Sursand' : (s.settlementName.includes('Saidpur') ? 'Runni Saidpur' : 'Majorganj')))))}, ${s.district || 'Sitamarhi'} | Sector ID: ${s.habitationId}`,
             breadcrumbs: [
                 { label: "Home", path: "#/overview" },
                 { label: "Command Center", path: "#/overview" },
@@ -172,10 +172,10 @@ export class SettlementDetailView {
                 { label: s.settlementName }
             ],
             actionsHtml: `
-                <button type="button" class="btn btn-sm btn-outline" id="btnExplainPriority">💡 Why this priority?</button>
-                <button type="button" class="btn btn-sm btn-secondary" onclick="window.location.hash='#/map'">🗺️ View on GIS Map</button>
-                <button type="button" class="btn btn-sm btn-primary" onclick="window.location.hash='#/relocation'">🚚 Relocation Plan</button>
-                <button type="button" class="btn btn-sm btn-outline" onclick="window.location.hash='#/overview'">⬅️ Overview</button>
+                <button type="button" class="btn btn-sm btn-outline" id="btnExplainPriority">Why this priority?</button>
+                <button type="button" class="btn btn-sm btn-secondary" onclick="window.location.hash='#/map'">View on GIS Map</button>
+                <button type="button" class="btn btn-sm btn-primary" onclick="window.location.hash='#/relocation'">Relocation Plan</button>
+                <button type="button" class="btn btn-sm btn-outline" onclick="window.location.hash='#/overview'">Overview</button>
             `
         });
 
@@ -203,7 +203,7 @@ export class SettlementDetailView {
                 <div class="risk-pillars-grid">
                     <div class="risk-pillar-item">
                         <div class="risk-pillar-header">
-                            <span style="color: var(--text-secondary);">🌊 Hazard Exposure (35%)</span>
+                            <span style="color: var(--text-secondary);">Hazard Exposure (35%)</span>
                             <strong style="color: var(--status-critical-text);">${riskScore100}%</strong>
                         </div>
                         <div class="risk-pillar-bar-bg">
@@ -213,7 +213,7 @@ export class SettlementDetailView {
 
                     <div class="risk-pillar-item">
                         <div class="risk-pillar-header">
-                            <span style="color: var(--text-secondary);">🏚️ Vulnerability Profile (25%)</span>
+                            <span style="color: var(--text-secondary);">Vulnerability Profile (25%)</span>
                             <strong style="color: var(--status-critical-text);">87%</strong>
                         </div>
                         <div class="risk-pillar-bar-bg">
@@ -223,7 +223,7 @@ export class SettlementDetailView {
 
                     <div class="risk-pillar-item">
                         <div class="risk-pillar-header">
-                            <span style="color: var(--text-secondary);">👥 Population Exposure (30%)</span>
+                            <span style="color: var(--text-secondary);">Exposed Population (20%)</span>
                             <strong style="color: var(--status-warning-text);">70%</strong>
                         </div>
                         <div class="risk-pillar-bar-bg">
@@ -233,11 +233,11 @@ export class SettlementDetailView {
 
                     <div class="risk-pillar-item">
                         <div class="risk-pillar-header">
-                            <span style="color: var(--text-secondary);">🚨 Priority Urgency (10%)</span>
-                            <strong style="color: var(--status-critical-text);">${Math.round(parseFloat(priorityScoreDisplay) * 100)}%</strong>
+                            <span style="color: var(--text-secondary);">Relocation Urgency (20%)</span>
+                            <strong style="color: var(--status-critical-text);">96%</strong>
                         </div>
                         <div class="risk-pillar-bar-bg">
-                            <div class="risk-pillar-bar-fill" style="width: ${Math.round(parseFloat(priorityScoreDisplay) * 100)}%; background: var(--status-critical);"></div>
+                            <div class="risk-pillar-bar-fill" style="width: 96%; background: var(--status-critical);"></div>
                         </div>
                     </div>
                 </div>
@@ -264,7 +264,7 @@ export class SettlementDetailView {
 
         const hazardCardHtml = Card.render({
             title: "Hazard Exposure Profile",
-            icon: "🌊",
+            icon: "",
             headerAction: StatusBadge.render({ status: hazardDetails.severity || "SEVERE" }),
             bodyHtml: `
                 <div class="hazard-metrics-grid">
@@ -293,8 +293,8 @@ export class SettlementDetailView {
         });
 
         const vulnCardHtml = Card.render({
-            title: "Vulnerability Dimensions (Stage 4.4)",
-            icon: "📊",
+            title: "Vulnerability Dimensions",
+            icon: "",
             headerAction: StatusBadge.render({ status: "HIGH_RISK", label: "High Vulnerability" }),
             bodyHtml: `
                 <div class="hazard-metrics-grid">
@@ -325,20 +325,20 @@ export class SettlementDetailView {
         // Spatial Mini-Map Context Card
         const miniMapCardHtml = Card.render({
             title: "Spatial Context & Evacuation Corridor",
-            icon: "🗺️",
-            headerAction: `<a href="#/map" class="btn btn-sm btn-outline">Open Full GIS Workspace ➔</a>`,
+            icon: "",
+            headerAction: `<a href="#/map" class="btn btn-sm btn-outline">Open Full GIS Workspace →</a>`,
             bodyHtml: `
                 <div class="settlement-mini-map-container">
                     <div id="settlement-mini-map" role="region" aria-label="Settlement Spatial Mini-Map"></div>
                 </div>
                 <div style="display: flex; justify-content: space-between; font-size: 0.75rem; color: var(--text-secondary); margin-top: var(--space-2);">
-                    <span>📍 Origin: ${s.settlementName} (${s.latitude ? s.latitude.toFixed(4) : '--'}° N, ${s.longitude ? s.longitude.toFixed(4) : '--'}° E)</span>
-                    <span>🛡️ Destination: ${s.recommendedSiteName || 'Designated Shelter'} (${s.transitDistanceKm ? s.transitDistanceKm.toFixed(2) + ' km' : '--'})</span>
+                    <span>Origin: ${s.settlementName} (${s.latitude ? s.latitude.toFixed(4) : '--'}° N, ${s.longitude ? s.longitude.toFixed(4) : '--'}° E)</span>
+                    <span>Destination: ${s.recommendedSiteName || 'Designated Shelter'} (${s.transitDistanceKm ? s.transitDistanceKm.toFixed(2) + ' km' : '--'})</span>
                 </div>
             `
         });
 
-        // Stage 7 Priority & Executive Decision Rationale
+        // Priority & Executive Decision Rationale
         const rationale = s.decisionRationale || {
             who: `${s.settlementName} (${popDisplay} vulnerable evacuees) classified as ${s.priorityLevel || 'IMMEDIATE'} Priority (Score: ${priorityScoreDisplay}/1.00).`,
             where: `Relocate to '${s.recommendedSiteName || 'Sitamarhi Central Flood Shelter'}' [${s.recommendedSiteId || 'FAC-EMG-003'}] (Transit: ${s.transitDistanceKm ? s.transitDistanceKm.toFixed(2) + ' km' : '2.50 km'}).`,
@@ -353,8 +353,8 @@ export class SettlementDetailView {
         };
 
         const decisionCardHtml = Card.render({
-            title: "Executive Decision Rationale (Stage 7 Intelligence)",
-            icon: "💡",
+            title: "Executive Decision Rationale",
+            icon: "",
             headerAction: StatusBadge.render({ status: s.priorityLevel || "IMMEDIATE", label: `${s.priorityLevel || 'IMMEDIATE'} (Score: ${priorityScoreDisplay})` }),
             bodyHtml: `
                 <div class="decision-rationale-box">
@@ -368,7 +368,7 @@ export class SettlementDetailView {
                         <strong style="color: var(--status-warning-text);">WHY:</strong> ${rationale.why}
                     </div>
                     <div class="decision-action-callout">
-                        <strong>⚡ ACTION GUIDANCE:</strong> ${rationale.action}
+                        <strong>ACTION GUIDANCE:</strong> ${rationale.action}
                     </div>
 
                     <div style="margin-top: var(--space-2);">
@@ -391,7 +391,7 @@ export class SettlementDetailView {
         // Recommended Safe Site Preview Card
         const safeSiteCardHtml = site ? Card.render({
             title: "Assigned Evacuation Safe Site",
-            icon: "🛡️",
+            icon: "",
             headerAction: StatusBadge.render({ status: site.suitabilityClass || "HIGHLY_SUITABLE" }),
             bodyHtml: `
                 <div style="display: flex; flex-direction: column; gap: var(--space-3); font-size: 0.82rem;">
@@ -429,7 +429,7 @@ export class SettlementDetailView {
             footerHtml: `
                 <div style="display: flex; justify-content: space-between; width: 100%; align-items: center;">
                     <a href="#/safe-sites" class="btn btn-sm btn-outline">Inspect Safe Site Directory</a>
-                    <a href="#/relocation" class="btn btn-sm btn-primary">Open Relocation Plan ➔</a>
+                    <a href="#/relocation" class="btn btn-sm btn-primary">Open Relocation Plan →</a>
                 </div>
             `
         }) : "";
@@ -456,7 +456,7 @@ export class SettlementDetailView {
 
                 ${SectionHeader.render({
                     title: "Relocation Recommendation & Priority Intelligence",
-                    subtitle: "Stage 7 Decision synthesis and assigned safe shelter logistics"
+                    subtitle: "Decision synthesis and assigned safe shelter logistics"
                 })}
                 <div class="grid-2">
                     ${decisionCardHtml}
@@ -515,7 +515,7 @@ export class SettlementDetailView {
             fillOpacity: 1
         }).addTo(this.miniMap);
 
-        originMarker.bindPopup(`<strong>📍 Origin:</strong> ${s.settlementName}`).openPopup();
+        originMarker.bindPopup(`<strong>Origin:</strong> ${s.settlementName}`).openPopup();
 
         // 3. Safe Site Marker & Transit Line
         if (site && site.latitude && site.longitude) {
@@ -527,7 +527,7 @@ export class SettlementDetailView {
                 fillOpacity: 1
             }).addTo(this.miniMap);
 
-            destMarker.bindPopup(`<strong>🛡️ Safe Shelter:</strong> ${site.name || site.siteId}`);
+            destMarker.bindPopup(`<strong>Safe Shelter:</strong> ${site.name || site.siteId}`);
 
             // Transit line
             L.polyline([

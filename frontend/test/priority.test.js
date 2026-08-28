@@ -32,7 +32,7 @@ export async function runPriorityTests() {
     assert.ok(!medHtml.includes("Sonbarsa Flood Inundation Area"), "Medium-term filter should NOT show Sonbarsa");
 
     // Test 3: Priority badges and score display
-    assert.ok(immediateHtml.includes("🔴 Immediate"), "Should render Immediate priority tab with count");
+    assert.ok(immediateHtml.includes("Immediate"), "Should render Immediate priority tab with count");
     assert.ok(immediateHtml.includes("explain-decision-btn"), "Should include Explainability trigger buttons for rows");
 
     console.log("  ✅ All Priority Intelligence Tests Passed.");

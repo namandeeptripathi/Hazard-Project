@@ -59,56 +59,58 @@ export class ExplainabilityDrawer {
                     <div class="explainability-drawer-header">
                         <div>
                             <div style="font-size: 0.72rem; color: var(--text-secondary); text-transform: uppercase; font-weight: 700; letter-spacing: 0.05em;">
-                                Stage 7 Explainability Intelligence
+                                Explainability Intelligence
                             </div>
                             <h2 id="drawerTitle" style="font-size: 1.25rem; font-weight: 800; color: var(--text-primary); margin-top: 2px;">
                                 Why This Decision?
                             </h2>
                             <div style="font-size: 0.78rem; color: var(--text-secondary); margin-top: 2px;">
-                                📍 <strong style="color: var(--text-primary);">${habName}</strong> (${habId})
+                                <strong style="color: var(--text-primary);">${habName}</strong> (${habId})
                             </div>
                         </div>
                         <button type="button" class="btn btn-sm btn-outline" id="closeExplainabilityDrawerBtn" aria-label="Close explainability drawer">
-                            ✕ Close
+                            Close
                         </button>
                     </div>
 
                     <!-- Drawer Body -->
                     <div class="explainability-drawer-body">
-                        <!-- Decision Summary Banner -->
+                        <!-- Level 1: Decision Summary Banner -->
                         <div style="background: var(--bg-surface); padding: var(--space-3); border-radius: var(--radius-md); border: 1px solid var(--border-default); display: flex; justify-content: space-between; align-items: center;">
                             <div>
-                                <span style="font-size: 0.7rem; color: var(--text-secondary); text-transform: uppercase;">Priority Classification</span>
+                                <span style="font-size: 0.7rem; color: var(--text-secondary); text-transform: uppercase; font-weight: 600;">Priority Classification</span>
                                 <div style="display: flex; gap: var(--space-2); align-items: center; margin-top: 4px;">
                                     ${StatusBadge.render({ status: priorityLevel, label: `${priorityLevel} (Score: ${priorityScore}/100)` })}
                                     <span class="badge badge-critical">Risk Tier: ${riskScore}/100</span>
                                 </div>
                             </div>
                             <div style="text-align: right;">
-                                <span style="font-size: 0.7rem; color: var(--text-secondary); text-transform: uppercase;">Decision Status</span>
-                                <div style="font-weight: 700; color: var(--status-safe-text); font-size: 0.88rem; margin-top: 4px;">✓ Verified Valid</div>
+                                <span style="font-size: 0.7rem; color: var(--text-secondary); text-transform: uppercase; font-weight: 600;">Decision Status</span>
+                                <div style="font-weight: 700; color: var(--status-safe-text); font-size: 0.88rem; margin-top: 4px;">Verified Valid</div>
                             </div>
                         </div>
 
-                        <!-- 1. Executive Synthesis (WHO -> WHERE -> WHY -> ACTION) -->
+                        <!-- Level 1: Operational Action Directive -->
+                        <div class="rationale-action-callout" style="margin: 0; background: rgba(239, 68, 68, 0.12); border-left: 3px solid var(--status-critical); padding: var(--space-3); border-radius: var(--radius-sm);">
+                            <strong style="color: #ffffff;">ACTION:</strong> <span style="color: #ffffff;">${rationale.action || rationale.actionabilityGuidance || 'Deploy emergency evacuation convoy.'}</span>
+                        </div>
+
+                        <!-- Level 2: Executive Synthesis (WHO -> WHERE -> WHY) -->
                         <div class="explainability-section">
                             <h3 class="explainability-section-title">
-                                💡 Executive Decision Rationale
+                                Executive Decision Synthesis
                             </h3>
-                            <div class="explainability-rationale-box">
-                                <div class="rationale-line"><strong style="color: var(--status-info-bright);">WHO:</strong> ${rationale.who || rationale.whoStatement || 'Vulnerable settlement in high-risk zone.'}</div>
-                                <div class="rationale-line"><strong style="color: var(--status-safe-text);">WHERE:</strong> ${rationale.where || rationale.whereStatement || 'Designated regional safe shelter.'}</div>
-                                <div class="rationale-line"><strong style="color: var(--status-warning-text);">WHY:</strong> ${rationale.why || rationale.whyStatement || 'Mathematical optimization of risk, proximity, and shelter capacity.'}</div>
-                                <div class="rationale-action-callout">
-                                    <strong>⚡ ACTION:</strong> ${rationale.action || rationale.actionabilityGuidance || 'Deploy emergency evacuation convoy.'}
-                                </div>
+                            <div style="display: flex; flex-direction: column; gap: var(--space-2); font-size: 0.82rem; color: var(--text-secondary);">
+                                <div><strong style="color: var(--status-info-bright);">WHO:</strong> ${rationale.who}</div>
+                                <div><strong style="color: var(--status-safe-text);">WHERE:</strong> ${rationale.where}</div>
+                                <div><strong style="color: var(--status-warning-text);">WHY:</strong> ${rationale.why}</div>
                             </div>
                         </div>
 
-                        <!-- 2. Decision Contributors & Calibrated Factor Weights -->
+                        <!-- Level 3: Decision Contributors & Calibrated Factor Weights -->
                         <div class="explainability-section">
                             <h3 class="explainability-section-title">
-                                📊 Prioritization Factor Contributions
+                                Contributing Factor Weights & Evidence
                             </h3>
                             <div style="display: flex; flex-direction: column; gap: var(--space-3);">
                                 ${contributors.map(c => {
@@ -135,10 +137,10 @@ export class ExplainabilityDrawer {
                         <!-- 3. Key Strengths & Feasibility Evidence -->
                         <div class="explainability-section">
                             <h3 class="explainability-section-title">
-                                🛡️ Key Decision Strengths
+                                Key Decision Strengths
                             </h3>
                             <ul class="explainability-bullet-list">
-                                ${strengths.map(s => `<li>✓ ${s}</li>`).join("")}
+                                ${strengths.map(s => `<li>${s}</li>`).join("")}
                             </ul>
                         </div>
 
@@ -146,10 +148,10 @@ export class ExplainabilityDrawer {
                         ${deficits.length > 0 ? `
                             <div class="explainability-section">
                                 <h3 class="explainability-section-title" style="color: var(--status-critical-text);">
-                                    ⚠ Operational Cautions & Deficits
+                                    Operational Cautions & Deficits
                                 </h3>
                                 <ul class="explainability-bullet-list" style="color: var(--status-critical-text);">
-                                    ${deficits.map(d => `<li>⚠ ${d}</li>`).join("")}
+                                    ${deficits.map(d => `<li>• ${d}</li>`).join("")}
                                 </ul>
                             </div>
                         ` : ''}
@@ -161,7 +163,7 @@ export class ExplainabilityDrawer {
                             View Settlement Intelligence
                         </a>
                         <a href="#/relocation" class="btn btn-sm btn-primary" id="drawerRelocationLink">
-                            Open Relocation Planner ➔
+                            Open Relocation Planner
                         </a>
                     </div>
                 </div>

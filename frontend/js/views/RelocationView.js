@@ -95,14 +95,14 @@ export class RelocationView {
 
         const headerHtml = PageHeader.render({
             title: "Relocation Decision & Capacity Planner",
-            subtitle: "Stage 7 Priority classification, multi-criteria shelter assignments, capacity shortfall detection, and convoy logistics.",
+            subtitle: "Plan safe relocation, shelter assignments, and evacuation routes.",
             breadcrumbs: [
                 { label: "Home", path: "#/overview" },
                 { label: "Relocation Planner" }
             ],
             actionsHtml: `
-                <a href="#/safe-sites" class="btn btn-sm btn-outline">🛡️ Safe Site Directory</a>
-                <a href="#/map" class="btn btn-sm btn-primary">🗺️ Open GIS Workspace</a>
+                <a href="#/safe-sites" class="btn btn-sm btn-outline">Safe Site Directory</a>
+                <a href="#/map" class="btn btn-sm btn-primary">Open GIS Workspace</a>
             `
         });
 
@@ -114,29 +114,29 @@ export class RelocationView {
                 ${StatCard.render({
                     label: "Settlements Requiring Action",
                     value: kpi.settlementsNeedingRelocation.toString(),
-                    icon: "🚨",
-                    subtitle: "High-priority habitations in inundation zones",
+                    icon: "",
+                    subtitle: "High-priority areas",
                     status: "critical"
                 })}
                 ${StatCard.render({
                     label: "People Requiring Relocation",
                     value: kpi.evacueesRequiringRelocation.toLocaleString(),
-                    icon: "👥",
-                    subtitle: "Identified vulnerable evacuees across district",
+                    icon: "",
+                    subtitle: "Total evacuees",
                     status: "neutral"
                 })}
                 ${StatCard.render({
                     label: "Accommodated in Primary Shelters",
                     value: kpi.evacueesAccommodated.toLocaleString(),
-                    icon: "✓",
-                    subtitle: "93.7% absorbed in primary destination safe sites",
+                    icon: "",
+                    subtitle: "93.7% in primary sites",
                     status: "safe"
                 })}
                 ${StatCard.render({
                     label: "Capacity Shortfall (Overflow Needed)",
                     value: kpi.capacityGap.toLocaleString(),
-                    icon: "⚠",
-                    subtitle: "Routed cleanly to secondary safe shelters",
+                    icon: "",
+                    subtitle: "Routed to secondary shelters",
                     status: "warning"
                 })}
             </div>
@@ -149,7 +149,7 @@ export class RelocationView {
                 <div class="relocation-queue-panel">
                     <div style="padding: var(--space-3) var(--space-4); border-bottom: 1px solid var(--border-default); display: flex; justify-content: space-between; align-items: center;">
                         <h3 style="font-size: 0.9rem; font-weight: 700; color: var(--text-primary); text-transform: uppercase; letter-spacing: 0.05em;">
-                            Priority Queue (Stage 7A)
+                            Priority Queue
                         </h3>
                         <span class="badge badge-critical">${this.state.cases.length} Cases</span>
                     </div>
@@ -177,7 +177,7 @@ export class RelocationView {
                 <!-- Site Capacity Breakdown -->
                 ${Card.render({
                     title: "Safe Shelter Bed Capacity Balance",
-                    icon: "🏢",
+                    icon: "",
                     bodyHtml: `
                         <table class="data-table" style="width: 100%; font-size: 0.78rem;">
                             <thead>
@@ -213,7 +213,7 @@ export class RelocationView {
                 <!-- Settlement Allocation Roster -->
                 ${Card.render({
                     title: "Settlement Relocation Allocation Roster",
-                    icon: "📋",
+                    icon: "",
                     bodyHtml: `
                         <table class="data-table" style="width: 100%; font-size: 0.78rem;">
                             <thead>
@@ -234,8 +234,8 @@ export class RelocationView {
                                         <td style="font-weight: 700;">${c.primaryDestination.allocatedPopulation.toLocaleString()}</td>
                                         <td>
                                             ${c.hasCapacityGap
-                                                ? `<span class="badge badge-warning">⚠ Overflow (850)</span>`
-                                                : `<span class="badge badge-safe">✓ Feasible</span>`}
+                                                ? `<span class="badge badge-warning">Overflow (${c.capacityShortfall})</span>`
+                                                : `<span class="badge badge-safe">Feasible</span>`}
                                         </td>
                                     </tr>
                                 `).join("")}
@@ -268,28 +268,34 @@ export class RelocationView {
     renderQueueItem(c) {
         const isActive = c.caseId === this.state.activeCase.caseId;
         const popDisplay = c.population.toLocaleString();
+        const blockName = c.habitationName.includes('Sonbarsa') ? 'Sonbarsa' : (c.habitationName.includes('Bairgania') ? 'Bairgania' : (c.habitationName.includes('Sursand') ? 'Sursand' : (c.habitationName.includes('Saidpur') ? 'Runni Saidpur' : 'Majorganj')));
 
         return `
             <div class="relocation-queue-item ${isActive ? 'active' : ''}" data-case-id="${c.caseId}">
                 <div style="display: flex; justify-content: space-between; align-items: flex-start;">
-                    <strong style="font-size: 0.85rem; color: ${isActive ? '#ffffff' : 'var(--text-primary)'};">
-                        ${c.habitationName}
-                    </strong>
+                    <div>
+                        <strong style="font-size: 0.85rem; color: ${isActive ? '#ffffff' : 'var(--text-primary)'};">
+                            ${c.habitationName}
+                        </strong>
+                        <div style="font-size: 0.72rem; color: var(--text-tertiary); margin-top: 1px;">
+                            Block: ${blockName}, ${c.district}
+                        </div>
+                    </div>
                     ${StatusBadge.render({ status: c.priorityLevel || "IMMEDIATE", label: (c.priorityScore || 0.88).toFixed(2) })}
                 </div>
 
                 <div style="font-size: 0.75rem; color: var(--text-secondary); margin-top: 4px; display: flex; justify-content: space-between;">
-                    <span>👥 ${popDisplay} Evacuees</span>
+                    <span>${popDisplay} Evacuees</span>
                     <span>Risk: <strong>${Math.round(c.riskScore * 100)}/100</strong></span>
                 </div>
 
                 <div style="font-size: 0.72rem; color: var(--status-safe-text); margin-top: 4px;">
-                    ➔ ${c.primaryDestination.siteName} (${c.primaryDestination.transitDistanceKm.toFixed(1)} km)
+                    ${c.primaryDestination.siteName} (${c.primaryDestination.transitDistanceKm.toFixed(1)} km)
                 </div>
 
                 ${c.hasCapacityGap ? `
                     <div style="margin-top: 4px;">
-                        <span class="badge badge-warning" style="font-size: 0.68rem;">⚠ Capacity Gap: ${c.capacityShortfall} evacuees</span>
+                        <span class="badge badge-warning" style="font-size: 0.68rem;">Capacity Gap: ${c.capacityShortfall}</span>
                     </div>
                 ` : ''}
             </div>
@@ -304,21 +310,25 @@ export class RelocationView {
         const pop = c.population;
         const primAvail = c.primaryDestination.availableCapacity;
         const isGap = c.hasCapacityGap;
+        const blockName = c.habitationName.includes('Sonbarsa') ? 'Sonbarsa' : (c.habitationName.includes('Bairgania') ? 'Bairgania' : (c.habitationName.includes('Sursand') ? 'Sursand' : (c.habitationName.includes('Saidpur') ? 'Runni Saidpur' : 'Majorganj')));
 
         return `
-            <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-subtle); padding-bottom: var(--space-3);">
+            <div style="display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 1px solid var(--border-subtle); padding-bottom: var(--space-3); gap: var(--space-3);">
                 <div>
-                    <div style="font-size: 0.72rem; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.05em; font-weight: 700;">
-                        Consolidated Evacuation Assignment • ${c.district} District
-                    </div>
-                    <h2 style="font-size: 1.25rem; font-weight: 800; color: var(--text-primary); margin-top: 2px;">
+                    <h2 style="font-size: 1.25rem; font-weight: 800; color: var(--text-primary); margin: 0 0 4px 0;">
                         ${c.habitationName}
                     </h2>
+                    <div style="font-size: 0.82rem; color: var(--text-secondary); display: flex; align-items: center; gap: var(--space-2);">
+                        <span>Block: <strong>${blockName}</strong>, ${c.district}</span>
+                        <span style="color: var(--text-tertiary);">·</span>
+                        <span><strong>${pop.toLocaleString()}</strong> exposed population</span>
+                        <span style="color: var(--text-tertiary);">·</span>
+                        <span>Risk <strong>${Math.round(c.riskScore * 100)}/100</strong></span>
+                    </div>
                 </div>
                 <div style="display: flex; gap: var(--space-2); align-items: center;">
-                    <button type="button" class="btn btn-xs btn-outline" id="btnRelocationExplain">💡 Why this destination?</button>
-                    ${StatusBadge.render({ status: c.priorityLevel || "IMMEDIATE", label: `${c.priorityLevel || 'IMMEDIATE'} PRIORITY` })}
-                    ${StatusBadge.render({ status: isGap ? "WARNING" : "SAFE", label: isGap ? "⚠ MULTI-DESTINATION" : "✓ FEASIBLE" })}
+                    ${StatusBadge.render({ status: c.priorityLevel || "IMMEDIATE", label: `${(c.priorityLevel || 'IMMEDIATE').replace('_', ' ')} PRIORITY` })}
+                    <button type="button" class="btn btn-xs btn-outline" id="btnRelocationExplain">Why this destination?</button>
                 </div>
             </div>
 
@@ -326,17 +336,16 @@ export class RelocationView {
             ${isGap ? `
                 <div class="capacity-gap-alert">
                     <div style="display: flex; justify-content: space-between; align-items: center;">
-                        <strong style="color: var(--status-critical-text); font-size: 0.88rem;">⚠ CAPACITY SHORTFALL DETECTED: ${c.capacityShortfall.toLocaleString()} Evacuees</strong>
-                        <span class="badge badge-critical">Headroom Deficit</span>
+                        <strong style="color: var(--status-critical-text); font-size: 0.85rem;">CAPACITY SHORTFALL DETECTED: ${c.capacityShortfall.toLocaleString()} Evacuees</strong>
+                        <span style="font-size: 0.72rem; color: var(--text-secondary);">Multi-destination plan</span>
                     </div>
-                    <div style="font-size: 0.78rem; color: var(--text-primary); line-height: 1.4;">
-                        Origin population (<strong>${pop.toLocaleString()}</strong>) exceeds primary shelter headroom (<strong>${primAvail.toLocaleString()}</strong>).
-                        The Stage 6 Allocation Engine has automatically established an optimal multi-destination distribution to accommodate all evacuees.
+                    <div style="font-size: 0.78rem; color: var(--text-secondary); margin-top: 4px; line-height: 1.4;">
+                        Origin population (<strong>${pop.toLocaleString()}</strong>) exceeds primary shelter headroom (<strong>${primAvail.toLocaleString()}</strong>). <strong>${c.capacityShortfall.toLocaleString()} evacuees</strong> routed to secondary overflow shelter.
                     </div>
                 </div>
             ` : `
-                <div style="background: rgba(16, 185, 129, 0.12); border-left: 4px solid var(--status-safe); padding: var(--space-3); border-radius: var(--radius-md); font-size: 0.8rem;">
-                    <strong style="color: var(--status-safe-text);">✓ FULL SINGLE-SITE FEASIBILITY:</strong>
+                <div style="background: rgba(16, 185, 129, 0.08); border: 1px solid rgba(16, 185, 129, 0.25); border-left: 3px solid var(--status-safe); padding: var(--space-3); border-radius: var(--radius-md); font-size: 0.8rem;">
+                    <strong style="color: var(--status-safe-text);">FULL SINGLE-SITE FEASIBILITY:</strong>
                     All <strong>${pop.toLocaleString()}</strong> evacuees are comfortably accommodated within '${c.primaryDestination.siteName}' with <strong>${(primAvail - pop).toLocaleString()} beds surplus headroom</strong> remaining.
                 </div>
             `}
@@ -346,14 +355,14 @@ export class RelocationView {
                 <!-- Primary Destination -->
                 <div style="background: var(--bg-surface-elevated); border: 1px solid var(--border-default); border-radius: var(--radius-md); padding: var(--space-3); display: flex; flex-direction: column; gap: var(--space-2);">
                     <div style="display: flex; justify-content: space-between; align-items: center;">
-                        <span style="font-size: 0.72rem; color: var(--text-secondary); text-transform: uppercase; font-weight: 700;">Primary Destination (Rank #1)</span>
+                        <span style="font-size: 0.7rem; color: var(--text-secondary); text-transform: uppercase; font-weight: 700; letter-spacing: 0.04em;">PRIMARY DESTINATION</span>
                         ${StatusBadge.render({ status: c.primaryDestination.suitabilityClass || "HIGHLY_SUITABLE" })}
                     </div>
-                    <h4 style="font-size: 0.95rem; font-weight: 700; color: var(--text-primary);">${c.primaryDestination.siteName}</h4>
+                    <h4 style="font-size: 0.95rem; font-weight: 700; color: var(--text-primary); margin: 0;">${c.primaryDestination.siteName}</h4>
                     <div style="font-size: 0.75rem; color: var(--text-secondary);">
-                        ID: <span style="font-family: var(--font-family-mono); color: var(--status-info-bright);">${c.primaryDestination.siteId}</span> | Transit: <strong>${c.primaryDestination.transitDistanceKm.toFixed(2)} km</strong>
+                        Transit: <strong>${c.primaryDestination.transitDistanceKm.toFixed(2)} km</strong> · ID: <span style="font-family: var(--font-family-mono); color: var(--text-tertiary);">${c.primaryDestination.siteId}</span>
                     </div>
-                    <div style="background: var(--bg-surface); padding: var(--space-2) var(--space-3); border-radius: var(--radius-sm); margin-top: 4px;">
+                    <div style="background: var(--bg-surface); padding: var(--space-2) var(--space-3); border-radius: var(--radius-sm); margin-top: 2px;">
                         <div style="display: flex; justify-content: space-between; font-size: 0.75rem;">
                             <span style="color: var(--text-secondary);">Allocated Evacuees:</span>
                             <strong style="color: var(--status-info-bright);">${c.primaryDestination.allocatedPopulation.toLocaleString()} beds</strong>
@@ -363,16 +372,16 @@ export class RelocationView {
 
                 <!-- Secondary / Overflow Destination if gap -->
                 ${c.overflowDestination ? `
-                    <div style="background: var(--bg-surface-elevated); border: 1px solid rgba(245, 158, 11, 0.4); border-radius: var(--radius-md); padding: var(--space-3); display: flex; flex-direction: column; gap: var(--space-2);">
+                    <div style="background: var(--bg-surface-elevated); border: 1px solid var(--border-default); border-radius: var(--radius-md); padding: var(--space-3); display: flex; flex-direction: column; gap: var(--space-2);">
                         <div style="display: flex; justify-content: space-between; align-items: center;">
-                            <span style="font-size: 0.72rem; color: var(--status-warning-text); text-transform: uppercase; font-weight: 700;">Secondary / Overflow (Rank #2)</span>
+                            <span style="font-size: 0.7rem; color: var(--status-warning-text); text-transform: uppercase; font-weight: 700; letter-spacing: 0.04em;">OVERFLOW DESTINATION</span>
                             ${StatusBadge.render({ status: c.overflowDestination.suitabilityClass || "SUITABLE" })}
                         </div>
-                        <h4 style="font-size: 0.95rem; font-weight: 700; color: var(--text-primary);">${c.overflowDestination.siteName}</h4>
+                        <h4 style="font-size: 0.95rem; font-weight: 700; color: var(--text-primary); margin: 0;">${c.overflowDestination.siteName}</h4>
                         <div style="font-size: 0.75rem; color: var(--text-secondary);">
-                            ID: <span style="font-family: var(--font-family-mono); color: var(--status-info-bright);">${c.overflowDestination.siteId}</span> | Transit: <strong>${c.overflowDestination.transitDistanceKm.toFixed(2)} km</strong>
+                            Transit: <strong>${c.overflowDestination.transitDistanceKm.toFixed(2)} km</strong> · ID: <span style="font-family: var(--font-family-mono); color: var(--text-tertiary);">${c.overflowDestination.siteId}</span>
                         </div>
-                        <div style="background: var(--bg-surface); padding: var(--space-2) var(--space-3); border-radius: var(--radius-sm); margin-top: 4px;">
+                        <div style="background: var(--bg-surface); padding: var(--space-2) var(--space-3); border-radius: var(--radius-sm); margin-top: 2px;">
                             <div style="display: flex; justify-content: space-between; font-size: 0.75rem;">
                                 <span style="color: var(--text-secondary);">Overflow Evacuees:</span>
                                 <strong style="color: var(--status-warning-text);">${c.overflowDestination.allocatedPopulation.toLocaleString()} beds</strong>
@@ -381,25 +390,38 @@ export class RelocationView {
                     </div>
                 ` : `
                     <div style="background: var(--bg-surface-elevated); border: 1px solid var(--border-subtle); border-radius: var(--radius-md); padding: var(--space-3); display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; color: var(--text-secondary); font-size: 0.8rem;">
-                        <span style="font-size: 1.5rem; margin-bottom: 4px;">🛡️</span>
-                        <strong>Single Site Sufficient</strong>
-                        <span>No secondary overflow shelter required.</span>
+                        <strong style="color: var(--text-primary);">Single Site Sufficient</strong>
+                        <span style="color: var(--text-tertiary); font-size: 0.75rem; margin-top: 2px;">No secondary overflow shelter required.</span>
                     </div>
                 `}
             </div>
 
-            <!-- Mandatory 5-Gate Feasibility Verification -->
+            <!-- Destination Feasibility -->
             <div>
-                <h4 style="font-size: 0.82rem; font-weight: 700; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: var(--space-2);">
-                    Mandatory 5-Gate Feasibility Verification (Stage 6.2)
-                </h4>
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: var(--space-2);">
+                    <h4 style="font-size: 0.82rem; font-weight: 700; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.05em; margin: 0;">
+                        Destination Feasibility
+                    </h4>
+                    <span style="font-size: 0.72rem; color: var(--status-safe-text); font-weight: 600;">
+                        ${c.feasibilityGates.filter(g => g.status === 'PASS').length}/${c.feasibilityGates.length} PASS
+                    </span>
+                </div>
                 <div class="feasibility-gates-grid">
                     ${c.feasibilityGates.map(g => `
                         <div class="feasibility-gate-card ${g.status === 'PASS' ? 'pass' : (g.status === 'PARTIAL' ? 'partial' : 'fail')}">
-                            <span><strong>${g.gate}:</strong> ${g.detail}</span>
-                            <span class="badge ${g.status === 'PASS' ? 'badge-safe' : (g.status === 'PARTIAL' ? 'badge-warning' : 'badge-critical')}">
-                                ${g.status === 'PASS' ? '✓ PASS' : (g.status === 'PARTIAL' ? '⚠ PARTIAL' : '✕ FAIL')}
-                            </span>
+                            <div style="display: flex; align-items: flex-start; justify-content: space-between; width: 100%; gap: var(--space-2);">
+                                <div>
+                                    <div style="font-weight: 600; font-size: 0.78rem; color: var(--text-primary);">
+                                        ${g.status === 'PASS' ? '✓' : '•'} ${g.gate}
+                                    </div>
+                                    <div style="font-size: 0.72rem; color: var(--text-secondary); margin-top: 2px;">
+                                        ${g.detail}
+                                    </div>
+                                </div>
+                                <span class="badge ${g.status === 'PASS' ? 'badge-safe' : (g.status === 'PARTIAL' ? 'badge-warning' : 'badge-critical')}" style="font-size: 0.65rem;">
+                                    ${g.status}
+                                </span>
+                            </div>
                         </div>
                     `).join("")}
                 </div>

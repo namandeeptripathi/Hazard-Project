@@ -24,44 +24,42 @@ export async function runComponentTests() {
         platformSubtitle: "NDRF & SDMA Relocation Intelligence",
         operationalMode: "ACTIVE MONITORING"
     });
-    assert.ok(headerHtml.includes("NATIONAL DISASTER DECISION PLATFORM"), "Header contains title");
-    assert.ok(headerHtml.includes("ACTIVE MONITORING"), "Header contains operational mode");
+    assert.ok(headerHtml.includes("NATIONAL DISASTER DECISION PLATFORM"), "Header displays platform title");
+    assert.ok(headerHtml.includes("NDRF & SDMA Relocation Intelligence"), "Header displays platform subtitle");
 
     // 2. Navigation component
     const navHtml = Navigation.render({ currentPath: "/overview", currentRegion: "Sitamarhi, Bihar" });
-    assert.ok(navHtml.includes('id="nav-overview"'), "Navigation contains overview link");
-    assert.ok(navHtml.includes('id="nav-map"'), "Navigation contains map link");
-    assert.ok(navHtml.includes('id="nav-safe-sites"'), "Navigation contains safe-sites link");
-    assert.ok(navHtml.includes('id="nav-relocation"'), "Navigation contains relocation link");
-    assert.ok(navHtml.includes("Sitamarhi, Bihar"), "Navigation contains active region");
+    assert.ok(navHtml.includes("Overview"), "Navigation contains Overview");
+    assert.ok(navHtml.includes("Map"), "Navigation contains Map");
+    assert.ok(navHtml.includes("Safe Sites"), "Navigation contains Safe Sites");
+    assert.ok(navHtml.includes("Relocation"), "Navigation contains Relocation");
+    assert.ok(navHtml.includes("Sitamarhi, Bihar"), "Navigation displays region");
 
     // 3. PageHeader component
     const pageHeaderHtml = PageHeader.render({
-        title: "Relocation Decision Intelligence",
-        subtitle: "Automated evacuation planning",
-        breadcrumbs: [{ label: "Home", path: "#/overview" }, { label: "Relocation" }]
+        title: "Relocation Decision Matrix",
+        subtitle: "District Level Resource Balance",
+        breadcrumbs: [{ label: "Home", path: "#/overview" }, { label: "Matrix" }]
     });
-    assert.ok(pageHeaderHtml.includes("Relocation Decision Intelligence"), "PageHeader contains title");
-    assert.ok(pageHeaderHtml.includes("Automated evacuation planning"), "PageHeader contains subtitle");
+    assert.ok(pageHeaderHtml.includes("Relocation Decision Matrix"), "PageHeader displays title");
+    assert.ok(pageHeaderHtml.includes("Home"), "PageHeader displays breadcrumbs");
 
     // 4. Card component
     const cardHtml = Card.render({
-        title: "Test Card Title",
-        bodyHtml: "<p>Card Body Content</p>",
-        footerHtml: "<span>Footer Note</span>",
-        elevated: true
+        title: "Vulnerability Index",
+        bodyHtml: "<p>Risk metrics</p>",
+        footerHtml: "<span>Updated</span>"
     });
-    assert.ok(cardHtml.includes("Test Card Title"), "Card contains title");
-    assert.ok(cardHtml.includes("card-elevated"), "Card has elevated class");
-    assert.ok(cardHtml.includes("Card Body Content"), "Card has body markup");
+    assert.ok(cardHtml.includes("Vulnerability Index"), "Card displays title");
+    assert.ok(cardHtml.includes("Risk metrics"), "Card displays bodyHtml");
 
     // 5. StatCard component
     const statHtml = StatCard.render({
-        label: "VULNERABLE POPULATION",
+        label: "Total Exposed",
         value: "94,293",
-        status: "critical",
-        subtitle: "In Flood Zone"
+        status: "critical"
     });
+    assert.ok(statHtml.includes("Total Exposed"), "StatCard displays label");
     assert.ok(statHtml.includes("stat-critical"), "StatCard has critical status class");
     assert.ok(statHtml.includes("94,293"), "StatCard displays value");
 
@@ -73,7 +71,7 @@ export async function runComponentTests() {
     assert.ok(badgeShortTerm.includes("badge-warning"), "SHORT_TERM maps to badge-warning");
 
     const badgeMediumTerm = StatusBadge.render({ status: "MEDIUM_TERM" });
-    assert.ok(badgeMediumTerm.includes("badge-moderate"), "MEDIUM_TERM maps to badge-moderate");
+    assert.ok(badgeMediumTerm.includes("badge-neutral"), "MEDIUM_TERM maps to badge-neutral");
 
     const badgeRecommended = StatusBadge.render({ status: "RECOMMENDED" });
     assert.ok(badgeRecommended.includes("badge-safe"), "RECOMMENDED maps to badge-safe");

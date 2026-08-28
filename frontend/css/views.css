@@ -27,8 +27,8 @@
 }
 
 .overview-action-banner {
-    background: linear-gradient(135deg, rgba(2, 132, 199, 0.15), rgba(139, 92, 246, 0.1));
-    border: 1px solid rgba(56, 189, 248, 0.3);
+    background-color: var(--bg-surface-elevated);
+    border: 1px solid var(--border-default);
     border-radius: var(--radius-lg);
     padding: var(--space-4) var(--space-5);
     display: flex;
@@ -106,13 +106,14 @@
 }
 
 .red-zone-tag {
-    background: var(--status-critical-bg);
+    background: transparent;
     color: var(--status-critical-text);
-    border: 1px solid var(--status-critical-border);
+    border: 1px solid rgba(239, 68, 68, 0.25);
     border-radius: var(--radius-sm);
     padding: 1px 4px;
-    font-size: var(--font-size-2xs);
-    font-weight: var(--font-weight-bold);
+    font-size: 0.65rem;
+    font-weight: 500;
+    opacity: 0.85;
 }
 
 /* Operational Summary 3-Column Grid */

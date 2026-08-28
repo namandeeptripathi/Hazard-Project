@@ -42,8 +42,8 @@ export class OverviewView {
             subtitle: "State & District multi-hazard monitoring, population exposure, and evacuation readiness.",
             breadcrumbs: [{ label: "Home", path: "#/overview" }, { label: "Command Center" }],
             actionsHtml: `
-                <button type="button" class="btn btn-sm btn-secondary" onclick="window.location.hash='#/map'">🗺️ Open GIS Map</button>
-                <button type="button" class="btn btn-sm btn-primary" onclick="window.location.hash='#/relocation'">🚚 Relocation Planner</button>
+                <button type="button" class="btn btn-sm btn-secondary" onclick="window.location.hash='#/map'">Open GIS Map</button>
+                <button type="button" class="btn btn-sm btn-primary" onclick="window.location.hash='#/relocation'">Relocation Planner</button>
             `
         });
 
@@ -166,30 +166,30 @@ export class OverviewView {
                 ${StatCard.render({
                     label: "HIGH-RISK SETTLEMENTS",
                     value: highRiskCount.toString(),
-                    icon: "⚠️",
+                    icon: "",
                     status: highRiskCount > 0 ? "critical" : "safe",
-                    subtitle: `🔴 ${redZoneCount} Active Inundation Zones`
+                    subtitle: "Active areas"
                 })}
                 ${StatCard.render({
                     label: "RED-ZONE SETTLEMENTS",
                     value: redZoneCount.toString(),
-                    icon: "🌊",
+                    icon: "",
                     status: redZoneCount > 0 ? "critical" : "safe",
-                    subtitle: "Immediate Evacuation Alert"
+                    subtitle: "Inundated"
                 })}
                 ${StatCard.render({
-                    label: "PEOPLE REQUIRING RELOCATION",
+                    label: "POPULATION EXPOSED",
                     value: totalEvacuees.toLocaleString(),
-                    icon: "👥",
+                    icon: "",
                     status: "warning",
-                    subtitle: "Across Sitamarhi District"
+                    subtitle: "Total exposed"
                 })}
                 ${StatCard.render({
                     label: "AVAILABLE SAFE CAPACITY",
                     value: availableCapacity.toLocaleString(),
-                    icon: "🛡️",
+                    icon: "",
                     status: availableCapacity >= totalEvacuees ? "safe" : "warning",
-                    subtitle: `🟢 ${100 - capacityUtilizationPct}% Shelter Headroom Free`
+                    subtitle: `${100 - capacityUtilizationPct}% available`
                 })}
             </div>
         `;
@@ -198,8 +198,8 @@ export class OverviewView {
         const actionBannerHtml = `
             <div class="overview-action-banner">
                 <div class="action-banner-text">
-                    <h3>⚡ Automated Evacuation Decision Intelligence Active</h3>
-                    <p>Stage 7 Priority & Multi-Criteria Recommendation engine is active for ${this.state.district}. Inspect spatial zones or review convoy orders.</p>
+                    <h3>Evacuation Decision Support</h3>
+                    <p>Automated relocation recommendations are active for ${this.state.district}.</p>
                 </div>
                 <div style="display: flex; gap: var(--space-2);">
                     <a href="#/map" class="btn btn-sm btn-primary">Open GIS Spatial Map</a>
@@ -224,51 +224,49 @@ export class OverviewView {
                     All Tiers (${settlements.length})
                 </button>
                 <button type="button" class="priority-filter-btn ${filterTier === 'IMMEDIATE' ? 'active' : ''}" data-tier="IMMEDIATE">
-                    🔴 Immediate (${immediateCount})
+                    Immediate (${immediateCount})
                 </button>
                 <button type="button" class="priority-filter-btn ${filterTier === 'SHORT_TERM' ? 'active' : ''}" data-tier="SHORT_TERM">
-                    🟠 Short-Term (${shortCount})
+                    Short-Term (${shortCount})
                 </button>
                 <button type="button" class="priority-filter-btn ${filterTier === 'MEDIUM_TERM' ? 'active' : ''}" data-tier="MEDIUM_TERM">
-                    🟣 Medium-Term (${medCount})
+                    Medium-Term (${medCount})
                 </button>
             </div>
         `;
 
-        const priorityRowsHtml = filteredSettlements.map((s, idx) => {
+        const priorityRowsHtml = filteredSettlements.map((s) => {
             const redZoneBadge = s.isRedZone ? `<span class="red-zone-tag">RED ZONE</span>` : "";
             const scoreDisplay = typeof s.priorityScore === "number" ? (s.priorityScore > 1 ? s.priorityScore : Math.round(s.priorityScore * 100)) : "--";
-            const rankStr = String(idx + 1).padStart(2, '0');
+            const riskValue = typeof s.riskScore === 'number' ? (s.riskScore > 1 ? s.riskScore : Math.round(s.riskScore * 100)) : '--';
+            const blockName = s.block ? s.block.replace(' Block', '') : (s.settlementName.includes('Sonbarsa') ? 'Sonbarsa' : (s.settlementName.includes('Bairgania') ? 'Bairgania' : (s.settlementName.includes('Riga') ? 'Riga' : (s.settlementName.includes('Sursand') ? 'Sursand' : (s.settlementName.includes('Saidpur') ? 'Runni Saidpur' : 'Majorganj')))));
 
             return `
                 <tr>
                     <td>
                         <div class="settlement-name-cell">
-                            <span style="font-family: var(--font-family-mono); font-size: 0.72rem; color: var(--text-tertiary); margin-right: 4px;">#${rankStr}</span>
                             <a href="#/settlements/${encodeURIComponent(s.habitationId)}" class="settlement-name-link">
                                 ${s.settlementName}
                             </a>
                             ${redZoneBadge}
                         </div>
+                        <div style="font-size: 0.72rem; color: var(--text-tertiary); margin-top: 1px;">
+                            Block: ${blockName}, ${s.district || 'Sitamarhi'}
+                        </div>
                     </td>
                     <td><span style="font-family: var(--font-family-mono);">${s.population ? s.population.toLocaleString() : "--"}</span></td>
-                    <td><strong style="color: ${s.riskScore >= 0.8 ? 'var(--status-critical-text)' : 'var(--status-warning-text)'};">${typeof s.riskScore === 'number' ? (s.riskScore > 1 ? s.riskScore : Math.round(s.riskScore * 100)) : '--'}</strong> / 100</td>
+                    <td><strong style="color: ${s.riskScore >= 0.8 ? 'var(--status-critical-text)' : 'var(--status-warning-text)'};">${riskValue}</strong></td>
                     <td>${StatusBadge.render({ status: s.priorityLevel, label: `${s.priorityLevel.replace('_', ' ')} (${scoreDisplay})` })}</td>
                     <td>
                         <div style="font-size: 0.8rem;">
-                            <span style="color: var(--status-safe-text); font-weight: 600;">➔ ${s.recommendedSiteName || 'Designated Shelter'}</span>
+                            <span style="color: var(--text-primary); font-weight: 500;">${s.recommendedSiteName || 'Designated Shelter'}</span>
                             <span style="color: var(--text-tertiary); font-size: 0.72rem; margin-left: 4px;">(${s.transitDistanceKm ? s.transitDistanceKm.toFixed(1) + ' km' : '--'})</span>
                         </div>
                     </td>
                     <td style="text-align: right;">
-                        <div style="display: inline-flex; gap: 4px;">
-                            <button type="button" class="btn btn-xs btn-outline explain-decision-btn" data-hab-id="${s.habitationId}">
-                                💡 Why?
-                            </button>
-                            <a href="#/settlements/${encodeURIComponent(s.habitationId)}" class="btn btn-xs btn-primary">
-                                Inspect ➔
-                            </a>
-                        </div>
+                        <button type="button" class="btn btn-xs btn-outline explain-decision-btn" data-hab-id="${s.habitationId}">
+                            Inspect
+                        </button>
                     </td>
                 </tr>
             `;
@@ -280,12 +278,12 @@ export class OverviewView {
                     <table class="priority-table" aria-label="Priority Settlements Table">
                         <thead>
                             <tr>
-                                <th>Settlement Name</th>
+                                <th>Settlement</th>
                                 <th>Population</th>
-                                <th>Risk Score</th>
-                                <th>Priority Level</th>
-                                <th>Recommended Destination</th>
-                                <th style="text-align: right;">Decision Action</th>
+                                <th>Risk</th>
+                                <th>Priority</th>
+                                <th>Recommended Site</th>
+                                <th style="text-align: right;">Action</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -297,11 +295,11 @@ export class OverviewView {
             : EmptyState.render({ title: "No Matching Settlements", description: `No settlements found with priority classification '${filterTier}'.` });
 
         const priorityCardHtml = Card.render({
-            title: "Priority Settlements (Stage 7 Decision Intelligence)",
-            icon: "🔴",
-            headerAction: `<span class="badge badge-critical">${highRiskCount} High-Priority Cases</span>`,
+            title: "Priority Settlements",
+            icon: "",
+            headerAction: "",
             bodyHtml: filterTabsHtml + priorityTableHtml,
-            footerHtml: `<div style="display: flex; justify-content: space-between; width: 100%;"><span style="color: var(--text-secondary);">Click '💡 Why?' to inspect Stage 7 mathematical decision rationale</span><a href="#/relocation">Open Full Relocation Planner →</a></div>`
+            footerHtml: `<div style="display: flex; justify-content: space-between; width: 100%;"><span style="color: var(--text-secondary);">Click 'Inspect' to view decision rationale</span><a href="#/relocation">Open Relocation Planner →</a></div>`
         });
 
         // 4. Operational Summary 3-Column Grid
@@ -309,74 +307,74 @@ export class OverviewView {
             <div class="operational-summary-grid">
                 ${Card.render({
                     title: "Multi-Hazard Risk Situation",
-                    icon: "🌊",
+                    icon: "",
                     bodyHtml: `
                         <div style="display: flex; flex-direction: column;">
                             <div class="summary-metric-row">
                                 <span class="summary-metric-label">Primary Hazard:</span>
-                                <span class="summary-metric-value" style="color: var(--status-critical-text);">Monsoon Riverine Flood</span>
+                                <span class="summary-metric-val" style="color: var(--status-critical-text);">Monsoon Flood Peak</span>
                             </div>
                             <div class="summary-metric-row">
-                                <span class="summary-metric-label">Peak Water Level:</span>
-                                <span class="summary-metric-value">2.8m above danger mark</span>
+                                <span class="summary-metric-label">Max Inundation:</span>
+                                <span class="summary-metric-val">2.8 meters (Danger +1.4m)</span>
                             </div>
                             <div class="summary-metric-row">
-                                <span class="summary-metric-label">Embankment Status:</span>
-                                <span class="summary-metric-value" style="color: var(--status-warning-text);">High Seepage Alert</span>
+                                <span class="summary-metric-label">River Embankment:</span>
+                                <span class="summary-metric-val" style="color: var(--status-warning-text);">High Seepage Alert</span>
                             </div>
                             <div class="summary-metric-row">
-                                <span class="summary-metric-label">Affected District:</span>
-                                <span class="summary-metric-value">Sitamarhi (Bagmati Basin)</span>
-                            </div>
-                        </div>
-                    `
-                })}
-
-                ${Card.render({
-                    title: "Relocation & Convoy Readiness",
-                    icon: "🚚",
-                    bodyHtml: `
-                        <div style="display: flex; flex-direction: column;">
-                            <div class="summary-metric-row">
-                                <span class="summary-metric-label">Evacuation Feasibility:</span>
-                                <span class="summary-metric-value" style="color: var(--status-safe-text);">100% Feasible</span>
-                            </div>
-                            <div class="summary-metric-row">
-                                <span class="summary-metric-label">Average Transit Distance:</span>
-                                <span class="summary-metric-value">4.2 km</span>
-                            </div>
-                            <div class="summary-metric-row">
-                                <span class="summary-metric-label">Transit Corridors:</span>
-                                <span class="summary-metric-value">All-Weather Elevated Roads</span>
-                            </div>
-                            <div class="summary-metric-row">
-                                <span class="summary-metric-label">NDRF Convoy Staging:</span>
-                                <span class="summary-metric-value" style="color: var(--status-safe-text);">Ready at Sector Base</span>
+                                <span class="summary-metric-label">Precipitation (72h):</span>
+                                <span class="summary-metric-val">184 mm (Heavy Runoff)</span>
                             </div>
                         </div>
                     `
                 })}
 
                 ${Card.render({
-                    title: "Safe Shelter Capacity Balance",
-                    icon: "🛡️",
+                    title: "Evacuation Readiness",
+                    icon: "",
                     bodyHtml: `
                         <div style="display: flex; flex-direction: column;">
                             <div class="summary-metric-row">
-                                <span class="summary-metric-label">Total Validated Shelters:</span>
-                                <span class="summary-metric-value">${safeSites.length} Designated Sites</span>
+                                <span class="summary-metric-label">Evacuation Target:</span>
+                                <span class="summary-metric-val" style="font-weight: 700; color: var(--status-info-bright);">${totalEvacuees.toLocaleString()}</span>
+                            </div>
+                            <div class="summary-metric-row">
+                                <span class="summary-metric-label">Immediate Convoy:</span>
+                                <span class="summary-metric-val" style="color: var(--status-critical-text);">${immediateCount} Habitations</span>
+                            </div>
+                            <div class="summary-metric-row">
+                                <span class="summary-metric-label">Road Transit Routes:</span>
+                                <span class="summary-metric-val" style="color: var(--status-safe-text);">Clear & Elevated</span>
+                            </div>
+                            <div class="summary-metric-row">
+                                <span class="summary-metric-label">Avg Transit Distance:</span>
+                                <span class="summary-metric-val">4.85 km</span>
+                            </div>
+                        </div>
+                    `
+                })}
+
+                ${Card.render({
+                    title: "Shelter Logistics Balance",
+                    icon: "",
+                    bodyHtml: `
+                        <div style="display: flex; flex-direction: column;">
+                            <div class="summary-metric-row">
+                                <span class="summary-metric-label">Total Shelters:</span>
+                                <span class="summary-metric-val">${safeSites.length} Facilities</span>
                             </div>
                             <div class="summary-metric-row">
                                 <span class="summary-metric-label">Total Bed Capacity:</span>
-                                <span class="summary-metric-value">${totalShelterCapacity.toLocaleString()} beds</span>
+                                <span class="summary-metric-val">${totalShelterCapacity.toLocaleString()}</span>
                             </div>
                             <div class="summary-metric-row">
-                                <span class="summary-metric-label">Net Surplus Headroom:</span>
-                                <span class="summary-metric-value" style="color: var(--status-safe-text);">+${availableCapacity.toLocaleString()} beds</span>
+                                <span class="summary-metric-label">Available Headroom:</span>
+                                <span class="summary-metric-val" style="color: var(--status-safe-text); font-weight: 700;">${availableCapacity.toLocaleString()}</span>
                             </div>
                             <div class="summary-metric-row">
-                                <span class="summary-metric-label">Healthcare Support:</span>
-                                <span class="summary-metric-value" style="color: var(--status-safe-text);">Primary Health Centers Near</span>
+                                <span class="summary-metric-label">Capacity Utilization:</span>
+                                <span class="summary-metric-val">${capacityUtilizationPct}%</span>
                             </div>
                         </div>
                     `
@@ -389,8 +387,8 @@ export class OverviewView {
                 ${actionBannerHtml}
                 ${kpiRowHtml}
                 ${SectionHeader.render({
-                    title: "Priority Relocation Snapshot",
-                    subtitle: "Habitations ordered by automated multi-criteria priority classification"
+                    title: "Relocation Priorities",
+                    subtitle: "Settlements ranked by urgency and risk"
                 })}
                 ${priorityCardHtml}
                 ${SectionHeader.render({
