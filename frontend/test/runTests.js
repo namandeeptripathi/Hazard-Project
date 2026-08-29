@@ -25,10 +25,11 @@ import { runRelocationTests } from "./relocation.test.js";
 import { runPriorityTests } from "./priority.test.js";
 import { runExplainabilityTests } from "./explainability.test.js";
 import { runUxIntegrationTests } from "./uxIntegration.test.js";
+import { runSimulationTests } from "./simulation.test.js";
 
 async function main() {
     console.log("=================================================");
-    console.log("Stage 8E — Priority, Explainability & UX Suite");
+    console.log("Stage 8E & 9 — Disaster Decision Frontend Suite");
     console.log("=================================================\n");
 
     try {
@@ -43,9 +44,10 @@ async function main() {
         await runPriorityTests();
         await runExplainabilityTests();
         await runUxIntegrationTests();
+        await runSimulationTests();
 
         console.log("\n=================================================");
-        console.log("🎉 ALL 11 FRONTEND TEST SUITES PASSED (100%)");
+        console.log("🎉 ALL 12 FRONTEND TEST SUITES PASSED (100%)");
         console.log("=================================================");
         process.exit(0);
     } catch (err) {

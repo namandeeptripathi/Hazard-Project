@@ -50,10 +50,20 @@ public class CandidateSafeSiteService {
     private final RiskCalculationService riskCalculationService;
     private final SafeSiteThresholds thresholds;
 
-    // Cache for district risk lookups (TTL: 10s)
+    // Cache for district risk lookups (TTL: 5m)
     private final Map<String, DistrictRiskScoreDto> districtScoreCache = new ConcurrentHashMap<>();
     private volatile long lastCacheClear = System.currentTimeMillis();
-    private static final long CACHE_TTL_MS = 10_000L;
+    private static final long CACHE_TTL_MS = 300_000L;
+
+    // Cache for evaluated candidate safe sites (TTL: 5m)
+    private final List<CandidateSafeSiteDto> evaluatedSitesCache = new java.util.concurrent.CopyOnWriteArrayList<>();
+    private volatile long lastSitesCacheClear = 0L;
+    private static final long SITES_CACHE_TTL_MS = 300_000L;
+
+    // Cache for active high-risk districts (TTL: 5m)
+    private final List<String> cachedHighRiskDistricts = new java.util.concurrent.CopyOnWriteArrayList<>();
+    private volatile long lastHighRiskCacheClear = 0L;
+    private static final long HIGH_RISK_CACHE_TTL_MS = 300_000L;
 
     /**
      * Deterministic hierarchical comparator for candidate safe-site ranking:
@@ -91,6 +101,11 @@ public class CandidateSafeSiteService {
     // =========================================================================
 
     public List<CandidateSafeSiteDto> getAllCandidateSites() {
+        long now = System.currentTimeMillis();
+        if (now - lastSitesCacheClear <= SITES_CACHE_TTL_MS && !evaluatedSitesCache.isEmpty()) {
+            return new ArrayList<>(evaluatedSitesCache);
+        }
+
         List<InfrastructureAssetDto> allFacilities = dataProvider != null
                 ? dataProvider.getAllRegionalFacilities()
                 : Collections.emptyList();
@@ -100,6 +115,30 @@ public class CandidateSafeSiteService {
         }
 
         List<String> activeHighRiskDistricts = resolveActiveHighRiskDistricts();
+        List<CandidateSafeSiteDto> ranked = evaluateFacilities(allFacilities, activeHighRiskDistricts);
+        evaluatedSitesCache.clear();
+        evaluatedSitesCache.addAll(ranked);
+        lastSitesCacheClear = now;
+        return new ArrayList<>(ranked);
+    }
+
+    public List<CandidateSafeSiteDto> evaluateFacilities(List<InfrastructureAssetDto> facilitiesToEvaluate) {
+        return evaluateFacilities(facilitiesToEvaluate, null);
+    }
+
+    public List<CandidateSafeSiteDto> evaluateFacilities(List<InfrastructureAssetDto> facilitiesToEvaluate, List<String> highRiskDistricts) {
+        if (facilitiesToEvaluate == null || facilitiesToEvaluate.isEmpty()) {
+            return Collections.emptyList();
+        }
+
+        List<InfrastructureAssetDto> allFacilities = dataProvider != null
+                ? dataProvider.getAllRegionalFacilities()
+                : Collections.emptyList();
+
+        List<String> activeHighRiskDistricts = highRiskDistricts != null
+                ? highRiskDistricts
+                : (cachedHighRiskDistricts.isEmpty() ? Collections.emptyList() : new ArrayList<>(cachedHighRiskDistricts));
+
         List<InfrastructureAssetDto> healthcareFacilities = allFacilities.stream()
                 .filter(f -> f.getCategory() == InfrastructureCategory.HEALTHCARE)
                 .collect(Collectors.toList());
@@ -110,7 +149,7 @@ public class CandidateSafeSiteService {
                 .filter(CandidateSafeSiteService::isUsefulSupportingInfrastructure)
                 .collect(Collectors.toList());
 
-        List<CandidateSafeSiteDto> evaluated = allFacilities.stream()
+        List<CandidateSafeSiteDto> evaluated = facilitiesToEvaluate.stream()
                 .map(CandidateSafeSiteDto::fromInfrastructureAsset)
                 .filter(Objects::nonNull)
                 .peek(site -> {
@@ -146,26 +185,17 @@ public class CandidateSafeSiteService {
             return;
         }
 
-        String targetDistrict = null;
+        Optional<DistrictBoundary> boundaryOpt = Optional.empty();
         if (districtBoundaryRepository != null) {
             try {
-                Optional<DistrictBoundary> boundaryOpt = districtBoundaryRepository.findDistrictContainingPoint(lon, lat);
-                if (boundaryOpt.isPresent()) {
-                    targetDistrict = boundaryOpt.get().getName2();
-                }
+                boundaryOpt = districtBoundaryRepository.findDistrictContainingPoint(lon, lat);
             } catch (Exception e) {
                 log.warn("Spatial point-in-polygon lookup failed for site {}: {}", site.getSiteId(), e.getMessage());
             }
-
-            if (targetDistrict == null || targetDistrict.trim().isEmpty()) {
-                if (site.getDistrict() != null && !site.getDistrict().trim().isEmpty()) {
-                    Optional<DistrictBoundary> fallbackOpt = districtBoundaryRepository.findByName2IgnoreCase(site.getDistrict().trim());
-                    targetDistrict = fallbackOpt.map(DistrictBoundary::getName2).orElseGet(() -> site.getDistrict().trim());
-                }
-            }
-        } else if (site.getDistrict() != null) {
-            targetDistrict = site.getDistrict().trim();
         }
+
+        String targetDistrict = boundaryOpt.map(DistrictBoundary::getName2)
+                .orElse(site.getDistrict() != null && !site.getDistrict().trim().isEmpty() ? site.getDistrict().trim() : null);
 
         if (targetDistrict == null || targetDistrict.trim().isEmpty()) {
             site.setHazardSafetyStatus(HazardSafetyStatus.UNKNOWN);
@@ -377,6 +407,11 @@ public class CandidateSafeSiteService {
             }
         }
 
+        if (site.getDistrict() != null && upperTargetDistricts.contains(site.getDistrict().trim().toUpperCase())) {
+            applyDistanceClassification(site, 0.0, site.getDistrict().trim());
+            return;
+        }
+
         site.setDistanceMeters(null);
         site.setDistanceKilometers(null);
         site.setDistanceStatus(DistanceStatus.UNKNOWN);
@@ -384,6 +419,11 @@ public class CandidateSafeSiteService {
     }
 
     public List<String> resolveActiveHighRiskDistricts() {
+        long now = System.currentTimeMillis();
+        if (now - lastHighRiskCacheClear <= HIGH_RISK_CACHE_TTL_MS && !cachedHighRiskDistricts.isEmpty()) {
+            return new ArrayList<>(cachedHighRiskDistricts);
+        }
+
         if (redZoneService == null) return Collections.emptyList();
 
         List<RedZoneDto> redZonesList = null;
@@ -393,28 +433,32 @@ public class CandidateSafeSiteService {
             log.warn("Failed to retrieve red zones: {}", e.getMessage());
         }
 
+        List<String> result = new ArrayList<>();
         if (redZonesList != null && !redZonesList.isEmpty()) {
-            return redZonesList.stream()
+            result = redZonesList.stream()
                     .map(RedZoneDto::getDistrictName)
                     .filter(name -> name != null && !name.trim().isEmpty())
                     .collect(Collectors.toList());
+        } else {
+            List<RedZoneDto> highRiskList = null;
+            try {
+                highRiskList = redZoneService.getZonesByMinimumLevel(ZoneLevel.HIGH);
+            } catch (Exception e) {
+                log.warn("Failed to retrieve high risk zones: {}", e.getMessage());
+            }
+
+            if (highRiskList != null && !highRiskList.isEmpty()) {
+                result = highRiskList.stream()
+                        .map(RedZoneDto::getDistrictName)
+                        .filter(name -> name != null && !name.trim().isEmpty())
+                        .collect(Collectors.toList());
+            }
         }
 
-        List<RedZoneDto> highRiskList = null;
-        try {
-            highRiskList = redZoneService.getZonesByMinimumLevel(ZoneLevel.HIGH);
-        } catch (Exception e) {
-            log.warn("Failed to retrieve high risk zones: {}", e.getMessage());
-        }
-
-        if (highRiskList != null && !highRiskList.isEmpty()) {
-            return highRiskList.stream()
-                    .map(RedZoneDto::getDistrictName)
-                    .filter(name -> name != null && !name.trim().isEmpty())
-                    .collect(Collectors.toList());
-        }
-
-        return Collections.emptyList();
+        cachedHighRiskDistricts.clear();
+        cachedHighRiskDistricts.addAll(result);
+        lastHighRiskCacheClear = now;
+        return result;
     }
 
     public void applyDistanceClassification(CandidateSafeSiteDto site, double distanceMeters, String referenceAreaName) {
@@ -1147,14 +1191,32 @@ public class CandidateSafeSiteService {
             throw new InvalidHazardParameterException("Parameter 'top' must be a positive integer greater than 0.");
         }
 
-        List<CandidateSafeSiteDto> candidates = getAllCandidateSites();
-
-        // 1. Filter by district
+        List<CandidateSafeSiteDto> candidates;
         if (district != null && !district.trim().isEmpty()) {
             String targetDistrict = district.trim();
-            candidates = candidates.stream()
-                    .filter(c -> c.getDistrict() != null && c.getDistrict().equalsIgnoreCase(targetDistrict))
-                    .collect(Collectors.toList());
+            long now = System.currentTimeMillis();
+            if (now - lastSitesCacheClear <= SITES_CACHE_TTL_MS && !evaluatedSitesCache.isEmpty()) {
+                candidates = evaluatedSitesCache.stream()
+                        .filter(c -> c.getDistrict() != null && c.getDistrict().equalsIgnoreCase(targetDistrict))
+                        .collect(Collectors.toList());
+            } else {
+                List<InfrastructureAssetDto> allFacilities = dataProvider != null
+                        ? dataProvider.getAllRegionalFacilities()
+                        : Collections.emptyList();
+                List<InfrastructureAssetDto> districtFacilities = allFacilities.stream()
+                        .filter(f -> f.getDistrictName() != null && f.getDistrictName().equalsIgnoreCase(targetDistrict))
+                        .collect(Collectors.toList());
+
+                if (!districtFacilities.isEmpty()) {
+                    candidates = evaluateFacilities(districtFacilities);
+                } else {
+                    candidates = getAllCandidateSites().stream()
+                            .filter(c -> c.getDistrict() != null && c.getDistrict().equalsIgnoreCase(targetDistrict))
+                            .collect(Collectors.toList());
+                }
+            }
+        } else {
+            candidates = getAllCandidateSites();
         }
 
         // 2. Filter by category

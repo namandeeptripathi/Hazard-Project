@@ -13,6 +13,7 @@ import { LoadingState } from "../components/LoadingState.js";
 import { EmptyState } from "../components/EmptyState.js";
 import { ErrorState } from "../components/ErrorState.js";
 import { ExplainabilityDrawer } from "../components/ExplainabilityDrawer.js";
+import { SimulationModal } from "../components/SimulationModal.js";
 import { relocationService } from "../api/services/relocationService.js";
 import { settlementService } from "../api/services/settlementService.js";
 import { safeSiteService } from "../api/services/safeSiteService.js";
@@ -42,6 +43,7 @@ export class OverviewView {
             subtitle: "State & District multi-hazard monitoring, population exposure, and evacuation readiness.",
             breadcrumbs: [{ label: "Home", path: "#/overview" }, { label: "Command Center" }],
             actionsHtml: `
+                <button type="button" class="btn btn-sm btn-outline" id="headerOpenSimBtn" onclick="window.__openSimulationModal && window.__openSimulationModal()">⚡ What-If Simulation</button>
                 <button type="button" class="btn btn-sm btn-secondary" onclick="window.location.hash='#/map'">Open GIS Map</button>
                 <button type="button" class="btn btn-sm btn-primary" onclick="window.location.hash='#/relocation'">Relocation Planner</button>
             `
@@ -201,7 +203,8 @@ export class OverviewView {
                     <h3>Evacuation Decision Support</h3>
                     <p>Automated relocation recommendations are active for ${this.state.district}.</p>
                 </div>
-                <div style="display: flex; gap: var(--space-2);">
+                <div style="display: flex; gap: var(--space-2); flex-wrap: wrap;">
+                    <button type="button" class="btn btn-sm btn-outline" id="bannerOpenSimBtn" onclick="window.__openSimulationModal && window.__openSimulationModal()">⚡ What-If Simulation</button>
                     <a href="#/map" class="btn btn-sm btn-primary">Open GIS Spatial Map</a>
                     <a href="#/relocation" class="btn btn-sm btn-secondary">Review Decision Queue</a>
                 </div>
@@ -416,6 +419,11 @@ export class OverviewView {
                 }
             });
         });
+
+        // What-If Simulation triggers
+        window.__openSimulationModal = () => SimulationModal.open({ district: this.state.district || "Sitamarhi" });
+        document.getElementById("headerOpenSimBtn")?.addEventListener("click", () => window.__openSimulationModal());
+        document.getElementById("bannerOpenSimBtn")?.addEventListener("click", () => window.__openSimulationModal());
 
         // Explainability triggers
         const explainBtns = document.querySelectorAll(".explain-decision-btn");

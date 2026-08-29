@@ -88,6 +88,14 @@ public class InfrastructureAssetDto {
         this.districtName = districtName;
     }
 
+    public String getDistrict() {
+        return districtName;
+    }
+
+    public void setDistrict(String district) {
+        this.districtName = district;
+    }
+
     public String getState() {
         return state;
     }

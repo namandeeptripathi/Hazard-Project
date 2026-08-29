@@ -13,6 +13,14 @@ import { MapView } from "./views/MapView.js";
 import { SafeSitesView } from "./views/SafeSitesView.js";
 import { RelocationView } from "./views/RelocationView.js";
 import { SettlementDetailView } from "./views/SettlementDetailView.js";
+import { SimulationModal } from "./components/SimulationModal.js";
+
+// Global What-If Simulation Trigger
+if (typeof window !== "undefined") {
+    window.__openSimulationModal = (district = "Sitamarhi") => {
+        SimulationModal.open({ district });
+    };
+}
 
 export class App {
     constructor() {

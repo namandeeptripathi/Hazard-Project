@@ -625,4 +625,503 @@
     color: var(--status-info-text);
 }
 
+/* =========================================================================
+   Stage 9 — What-If Disaster Simulation Modal Styles
+   ========================================================================= */
+.simulation-modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(8, 12, 20, 0.85);
+    backdrop-filter: blur(4px);
+    z-index: 1100;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: var(--space-4);
+}
+
+.simulation-modal-dialog {
+    background: var(--bg-surface);
+    border: 1px solid var(--border-default);
+    border-radius: var(--radius-xl);
+    width: 100%;
+    max-width: 920px;
+    max-height: 90vh;
+    display: flex;
+    flex-direction: column;
+    box-shadow: var(--shadow-2xl);
+    overflow: hidden;
+}
+
+.simulation-modal-header {
+    padding: var(--space-4) var(--space-6);
+    background: var(--bg-surface-elevated);
+    border-bottom: 1px solid var(--border-subtle);
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+}
+
+.simulation-badge-row {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    margin-bottom: var(--space-1);
+}
+
+.badge-tag {
+    font-size: var(--font-size-2xs);
+    font-weight: 700;
+    color: var(--status-info-bright);
+    letter-spacing: 0.08em;
+}
+
+.simulation-modal-title {
+    font-size: var(--font-size-lg);
+    font-weight: 800;
+    color: var(--text-primary);
+    margin: 0;
+}
+
+.simulation-modal-subtitle {
+    font-size: var(--font-size-xs);
+    color: var(--text-secondary);
+    margin-top: var(--space-1);
+    margin-bottom: 0;
+}
+
+.btn-close-modal {
+    background: transparent;
+    border: none;
+    color: var(--text-secondary);
+    font-size: 1.8rem;
+    cursor: pointer;
+    line-height: 1;
+    padding: 0 var(--space-2);
+    transition: color var(--transition-fast);
+}
+
+.btn-close-modal:hover {
+    color: var(--text-primary);
+}
+
+.simulation-modal-body {
+    padding: var(--space-6);
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-6);
+}
+
+/* Simulation Config Card */
+.sim-config-card {
+    background: var(--bg-surface-elevated);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-lg);
+    padding: var(--space-4);
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-4);
+}
+
+.sim-form-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: var(--space-4);
+}
+
+.sim-form-group {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-1);
+}
+
+.sim-label {
+    font-size: var(--font-size-xs);
+    font-weight: 600;
+    color: var(--text-secondary);
+}
+
+.sim-select {
+    background: var(--bg-base);
+    border: 1px solid var(--border-default);
+    border-radius: var(--radius-md);
+    color: var(--text-primary);
+    padding: var(--space-2) var(--space-3);
+    font-size: var(--font-size-sm);
+}
+
+.sim-select:focus {
+    outline: none;
+    border-color: var(--status-info-bright);
+}
+
+/* Sliders */
+.sim-sliders-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+    gap: var(--space-3);
+}
+
+.sim-slider-box {
+    background: var(--bg-base);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-md);
+    padding: var(--space-3);
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+}
+
+.sim-slider-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: var(--font-size-xs);
+}
+
+.sim-slider-label {
+    font-weight: 600;
+    color: var(--text-secondary);
+}
+
+.sim-slider-val {
+    font-family: var(--font-family-mono);
+    font-weight: 700;
+    color: var(--status-info-bright);
+}
+
+.sim-range {
+    width: 100%;
+    accent-color: var(--status-info-bright);
+    cursor: pointer;
+}
+
+/* Action & Presets */
+.sim-actions-bar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: var(--space-3);
+    padding-top: var(--space-2);
+    border-top: 1px solid var(--border-subtle);
+}
+
+.sim-presets-group {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    flex-wrap: wrap;
+}
+
+.sim-presets-label {
+    font-size: var(--font-size-xs);
+    color: var(--text-tertiary);
+    font-weight: 600;
+}
+
+.btn-preset {
+    background: var(--bg-surface);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-sm);
+    color: var(--text-secondary);
+    font-size: var(--font-size-2xs);
+    font-weight: 600;
+    padding: 3px 8px;
+    cursor: pointer;
+    transition: all var(--transition-fast);
+}
+
+.btn-preset:hover {
+    background: var(--bg-surface-hover);
+    color: var(--text-primary);
+    border-color: var(--border-default);
+}
+
+.btn-run-sim {
+    padding: var(--space-2) var(--space-5);
+    font-weight: 700;
+}
+
+/* Results Section */
+.sim-results-container {
+    min-height: 140px;
+    display: flex;
+    flex-direction: column;
+}
+
+.sim-idle-state {
+    padding: var(--space-8);
+    text-align: center;
+    background: var(--bg-surface-elevated);
+    border: 1px dashed var(--border-default);
+    border-radius: var(--radius-lg);
+}
+
+.sim-idle-text {
+    font-size: var(--font-size-sm);
+    color: var(--text-secondary);
+    margin: 0;
+}
+
+.sim-results-wrapper {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-4);
+}
+
+.sim-comparison-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.sim-comparison-meta {
+    display: flex;
+    gap: var(--space-3);
+    flex-wrap: wrap;
+    font-size: var(--font-size-xs);
+}
+
+.sim-target-tag, .sim-scenario-tag {
+    background: var(--bg-surface-elevated);
+    border: 1px solid var(--border-subtle);
+    padding: 3px 10px;
+    border-radius: var(--radius-full);
+    color: var(--text-secondary);
+}
+
+/* Before -> After Cards */
+.sim-comparison-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: var(--space-3);
+}
+
+.sim-compare-card {
+    background: var(--bg-surface-elevated);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-lg);
+    padding: var(--space-3);
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+    position: relative;
+    transition: all var(--transition-fast);
+}
+
+.sim-compare-card.shifted-up {
+    border-color: var(--status-critical-border);
+    background: linear-gradient(180deg, var(--status-critical-bg), var(--bg-surface-elevated));
+}
+
+.sim-compare-title {
+    font-size: var(--font-size-2xs);
+    font-weight: 700;
+    color: var(--text-tertiary);
+    letter-spacing: 0.05em;
+}
+
+.sim-before-after-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-1);
+}
+
+.sim-val-block {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+    flex: 1;
+}
+
+.sim-val-label {
+    font-size: 0.65rem;
+    font-weight: 700;
+    color: var(--text-tertiary);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.sim-val-num {
+    font-size: 0.75rem;
+    font-weight: 700;
+    font-family: var(--font-family-mono);
+    color: var(--text-primary);
+    white-space: nowrap;
+    line-height: 1.25;
+    letter-spacing: -0.02em;
+}
+
+.sim-val-sub {
+    font-size: 0.7rem;
+    color: var(--text-secondary);
+    white-space: nowrap;
+}
+
+.sim-arrow {
+    color: var(--text-tertiary);
+    font-size: 1rem;
+    flex-shrink: 0;
+    padding: 0 2px;
+}
+
+.sim-delta-badge {
+    font-size: var(--font-size-2xs);
+    font-weight: 700;
+    padding: 2px 8px;
+    border-radius: var(--radius-sm);
+    text-align: center;
+    align-self: flex-start;
+}
+
+.badge-critical {
+    background: var(--status-critical-bg);
+    color: var(--status-critical-text);
+    border: 1px solid var(--status-critical-border);
+}
+
+.badge-safe {
+    background: var(--status-safe-bg);
+    color: var(--status-safe-text);
+    border: 1px solid var(--status-safe-border);
+}
+
+.badge-neutral {
+    background: var(--status-neutral-bg);
+    color: var(--status-neutral-text);
+    border: 1px solid var(--status-neutral-border);
+}
+
+.sim-card-help {
+    font-size: 0.65rem;
+    color: var(--text-tertiary);
+    line-height: 1.2;
+    margin-top: -2px;
+}
+
+.sim-reloc-metrics {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    background: var(--bg-surface);
+    padding: 4px 6px;
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--border-subtle);
+}
+
+.sim-reloc-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 0.67rem;
+    line-height: 1.25;
+    white-space: nowrap;
+    gap: 4px;
+}
+
+.sim-reloc-label {
+    color: var(--text-tertiary);
+    font-weight: 600;
+    font-size: 0.65rem;
+    white-space: nowrap;
+    flex-shrink: 0;
+}
+
+.sim-reloc-val {
+    font-family: var(--font-family-mono);
+    font-weight: 700;
+    color: var(--text-primary);
+    font-size: 0.67rem;
+    white-space: nowrap;
+    letter-spacing: -0.03em;
+    flex-shrink: 0;
+}
+
+/* All Districts Table */
+.sim-all-districts-section {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-3);
+    margin-top: var(--space-2);
+}
+
+.sim-aggregate-ribbon {
+    display: flex;
+    gap: var(--space-4);
+    background: var(--bg-surface-elevated);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-md);
+    padding: var(--space-2) var(--space-4);
+    font-size: var(--font-size-xs);
+    flex-wrap: wrap;
+}
+
+.sim-ribbon-stat {
+    color: var(--text-secondary);
+}
+
+.sim-ribbon-stat strong {
+    color: var(--text-primary);
+    margin-left: 4px;
+}
+
+.sim-table-wrapper {
+    max-height: 240px;
+    overflow-y: auto;
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-md);
+}
+
+.sim-districts-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: var(--font-size-xs);
+    text-align: left;
+}
+
+.sim-districts-table th {
+    background: var(--bg-surface-active);
+    color: var(--text-secondary);
+    padding: var(--space-2) var(--space-3);
+    position: sticky;
+    top: 0;
+    font-weight: 700;
+}
+
+.sim-districts-table td {
+    padding: var(--space-2) var(--space-3);
+    border-bottom: 1px solid var(--border-subtle);
+    color: var(--text-secondary);
+}
+
+.sim-districts-table tr.row-highlight td {
+    background: rgba(56, 189, 248, 0.04);
+}
+
+.sim-districts-table tr:hover td {
+    background: var(--bg-surface-hover);
+}
+
+.simulation-modal-footer {
+    padding: var(--space-3) var(--space-6);
+    background: var(--bg-surface-elevated);
+    border-top: 1px solid var(--border-subtle);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.sim-zero-mutation-tag {
+    font-size: var(--font-size-xs);
+    color: var(--text-tertiary);
+}
+
+
 

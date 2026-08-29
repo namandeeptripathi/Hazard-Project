@@ -22,7 +22,7 @@ export const API_CONFIG = {
             BASE: "/api/v1/safe-sites",
             GEOJSON: "/api/v1/safe-sites/geojson",
             CANDIDATES: "/api/v1/safe-sites/candidates",
-            DISTRICT: (district) => `/api/v1/safe-sites/district/${encodeURIComponent(district)}`,
+            DISTRICT: (district) => `/api/v1/safe-sites?district=${encodeURIComponent(district)}`,
             SEARCH: "/api/v1/safe-sites/search"
         },
         // Risk & Hazard Intelligence
@@ -50,6 +50,13 @@ export const API_CONFIG = {
             BASE: "/api/v1/vulnerability",
             SCORE: (district) => `/api/v1/vulnerability/score/district/${encodeURIComponent(district)}`,
             INDICATORS: (district) => `/api/v1/vulnerability/indicators/district/${encodeURIComponent(district)}`
+        },
+        // Stage 9: Scenario & Decision Simulation
+        SCENARIOS: {
+            BASE: "/api/v1/scenarios",
+            BY_ID: (scenarioId) => `/api/v1/scenarios/${encodeURIComponent(scenarioId)}`,
+            COMPARE: (scenarioId) => `/api/v1/scenarios/${encodeURIComponent(scenarioId)}/compare`,
+            COMPARE_ALL: (scenarioId) => `/api/v1/scenarios/${encodeURIComponent(scenarioId)}/compare/all`
         }
     }
 };
