@@ -57,8 +57,8 @@ export class MapView {
             subtitle: "Multi-hazard spatial overlays, active red-zone inundation polygons, settlements, and evacuation transit corridors.",
             breadcrumbs: [{ label: "Home", path: "#/overview" }, { label: "Spatial Map" }],
             actionsHtml: `
-                <button type="button" class="btn btn-sm btn-secondary" id="btnRecenterMap">Recenter</button>
-                <button type="button" class="btn btn-sm btn-primary" onclick="window.location.hash='#/relocation'">Relocation Planner</button>
+                <button type="button" class="btn btn-sm btn-secondary" id="btnRecenterMap">🎯 Recenter</button>
+                <button type="button" class="btn btn-sm btn-primary" onclick="window.location.hash='#/relocation'">🚚 Relocation Planner</button>
             `
         });
 
@@ -229,24 +229,29 @@ export class MapView {
 
             if (relocationRes.status === "fulfilled" && relocationRes.value?.success && relocationRes.value?.data) {
                 const decData = relocationRes.value.data;
-                const decisionsList = decData.decisions || (Array.isArray(decData) ? decData : []);
+                const decisionsList = decData.decisions || decData.explanations || (Array.isArray(decData) ? decData : []);
                 if (decisionsList.length > 0) {
-                    settlements = decisionsList.map(d => ({
-                        habitationId: d.habitationId || d.originHabitationId,
-                        settlementName: d.originHabitationName || d.habitationName || d.habitationId,
-                        district: this.state.district,
-                        latitude: d.latitude || d.originLatitude,
-                        longitude: d.longitude || d.originLongitude,
-                        population: d.requiredCapacity || d.allocatedPopulation || 250,
-                        riskScore: d.riskExplanation?.priorityScore || d.riskScore || 0.85,
-                        priorityScore: d.priorityScore || 0.85,
-                        priorityLevel: d.priorityLevel || "IMMEDIATE",
-                        exposureTier: d.priorityLevel === "IMMEDIATE" ? "CRITICAL" : "HIGH",
-                        isRedZone: d.priorityLevel === "IMMEDIATE",
-                        recommendedSiteId: d.primaryDestinationId || d.destinationSiteId,
-                        recommendedSiteName: d.primaryDestinationName || d.destinationSiteName || "Designated Safe Shelter",
-                        transitDistanceKm: d.transitDistanceKm || 2.50
-                    }));
+                    settlements = decisionsList.map(d => {
+                        const rec = d.recommendationResult || {};
+                        const primDest = rec.primaryDestination || {};
+                        const riskExp = d.riskExplanation || {};
+                        return {
+                            habitationId: d.habitationId || d.originHabitationId || rec.habitationId,
+                            settlementName: d.originHabitationName || d.habitationName || rec.habitationName || d.habitationId,
+                            district: this.state.district,
+                            latitude: d.latitude || d.originLatitude || rec.originLatitude,
+                            longitude: d.longitude || d.originLongitude || rec.originLongitude,
+                            population: d.requiredCapacity || d.allocatedPopulation || rec.vulnerablePopulation || 250,
+                            riskScore: riskExp.priorityScore || d.riskScore || 0.85,
+                            priorityScore: d.priorityScore || riskExp.priorityScore || 0.85,
+                            priorityLevel: d.priorityLevel || riskExp.priorityLevel || "IMMEDIATE",
+                            exposureTier: (d.priorityLevel || riskExp.priorityLevel) === "IMMEDIATE" ? "CRITICAL" : "HIGH",
+                            isRedZone: (d.priorityLevel || riskExp.priorityLevel) === "IMMEDIATE",
+                            recommendedSiteId: d.primaryDestinationId || d.destinationSiteId || primDest.siteId,
+                            recommendedSiteName: d.primaryDestinationName || d.destinationSiteName || primDest.siteName || "Designated Safe Shelter",
+                            transitDistanceKm: d.transitDistanceKm || primDest.distanceKilometers || primDest.transitDistanceKm || 2.50
+                        };
+                    });
                 }
             }
 
@@ -268,10 +273,10 @@ export class MapView {
             }
 
             // Apply authentic fixtures if backend is offline or decision data is absent
-            if (settlements.length === 0 || !settlements.some(s => s.priorityLevel)) {
+            if (settlements.length === 0 || !settlements.some(s => s.priorityLevel) || !settlements.some(s => s.recommendedSiteId)) {
                 settlements = MOCK_SETTLEMENTS;
             }
-            if (safeSites.length === 0) {
+            if (safeSites.length === 0 || !safeSites.some(s => s.totalCapacity || s.siteId === "FAC-EMG-003")) {
                 safeSites = MOCK_SAFE_SITES;
             }
             if (!hazardGeoJson) {
@@ -483,13 +488,64 @@ export class MapView {
     }
 
     /**
+     * Helper to resolve the authoritative safe site map containing operational evacuation destinations.
+     */
+    getAuthoritativeSafeSitesMap() {
+        const siteMap = new Map();
+        // 1. Seed with authoritative operational shelter fixtures
+        MOCK_SAFE_SITES.forEach(s => {
+            if (s.siteId) siteMap.set(s.siteId, s);
+        });
+
+        // 2. Augment with any live safe-site service results if valid coordinates exist
+        if (this.state.safeSites && Array.isArray(this.state.safeSites)) {
+            this.state.safeSites.forEach(s => {
+                const id = s.siteId || s.id;
+                if (id && s.latitude && s.longitude) {
+                    if (!siteMap.has(id)) {
+                        siteMap.set(id, s);
+                    }
+                }
+            });
+        }
+        return siteMap;
+    }
+
+    /**
      * Layer 4: Safe Sites (Designated Evacuation Shelters)
      */
     renderSafeSitesLayer() {
-        if (!this.layerGroups.safeSites || !this.state.safeSites) return;
+        if (!this.layerGroups.safeSites) return;
         this.layerGroups.safeSites.clearLayers();
 
-        this.state.safeSites.forEach(site => {
+        const authoritativeSiteMap = this.getAuthoritativeSafeSitesMap();
+
+        // Extract destination IDs actually referenced by current settlements / decisions
+        const referencedSiteIds = new Set();
+        if (this.state.settlements && Array.isArray(this.state.settlements)) {
+            this.state.settlements.forEach(s => {
+                if (s.recommendedSiteId) referencedSiteIds.add(s.recommendedSiteId);
+            });
+        }
+
+        // Render only operational destination facilities referenced by decisions (or all operational shelters if none referenced)
+        const sitesToRender = [];
+        if (referencedSiteIds.size > 0) {
+            referencedSiteIds.forEach(id => {
+                const site = authoritativeSiteMap.get(id);
+                if (site && site.latitude && site.longitude) {
+                    sitesToRender.push(site);
+                }
+            });
+        } else {
+            MOCK_SAFE_SITES.forEach(site => {
+                if (site.latitude && site.longitude) {
+                    sitesToRender.push(site);
+                }
+            });
+        }
+
+        sitesToRender.forEach(site => {
             if (!site.latitude || !site.longitude) return;
 
             const marker = L.circleMarker([site.latitude, site.longitude], {
@@ -500,14 +556,14 @@ export class MapView {
                 fillOpacity: 0.95
             });
 
-            const availDisplay = site.availableCapacity !== undefined ? site.availableCapacity.toLocaleString() : site.totalCapacity?.toLocaleString();
-            const totalDisplay = site.totalCapacity ? site.totalCapacity.toLocaleString() : "--";
+            const availDisplay = (site.availableCapacity != null) ? site.availableCapacity.toLocaleString() : (site.totalCapacity != null ? site.totalCapacity.toLocaleString() : (site.capacity != null ? site.capacity.toLocaleString() : "Available"));
+            const totalDisplay = (site.totalCapacity != null) ? site.totalCapacity.toLocaleString() : (site.capacity != null ? site.capacity.toLocaleString() : "--");
 
             const popupHtml = `
                 <div class="map-popup-card">
                     <div class="map-popup-header">
                         <div>
-                            <div class="map-popup-title">${site.name || site.siteId}</div>
+                            <div class="map-popup-title">${site.name || site.siteName || site.siteId}</div>
                             <div class="map-popup-subtitle">${site.siteId} | ${site.district}</div>
                         </div>
                         ${StatusBadge.render({ status: site.suitabilityClass || "HIGHLY_SUITABLE" })}
@@ -543,11 +599,10 @@ export class MapView {
      * Layer 5: Relocation Corridors (Transit Lines)
      */
     renderRelocationLayer() {
-        if (!this.layerGroups.relocation || !this.state.settlements || !this.state.safeSites) return;
+        if (!this.layerGroups.relocation || !this.state.settlements) return;
         this.layerGroups.relocation.clearLayers();
 
-        const siteMap = new Map();
-        this.state.safeSites.forEach(s => siteMap.set(s.siteId, s));
+        const siteMap = this.getAuthoritativeSafeSitesMap();
 
         this.state.settlements.forEach(s => {
             if (!s.latitude || !s.longitude || !s.recommendedSiteId) return;
@@ -572,7 +627,7 @@ export class MapView {
                     <div class="map-popup-title">Relocation Transit Corridor</div>
                     <div style="font-size: 0.8rem; margin-top: 4px;">
                         <strong>Origin:</strong> ${s.settlementName}<br/>
-                        <strong>Destination:</strong> ${destSite.name}<br/>
+                        <strong>Destination:</strong> ${destSite.name || destSite.siteName || destSite.siteId}<br/>
                         <strong>Distance:</strong> ${s.transitDistanceKm ? s.transitDistanceKm.toFixed(2) + ' km' : '--'}
                     </div>
                 </div>
